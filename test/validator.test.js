@@ -100,6 +100,15 @@ const BAD_TIMES = [
   '901d1',
   '000000000000000000000'
 ];
+const GOOD_OBJECTS = [
+  { something: 'yes' },
+  { other: { thing: 'no' }}
+];
+const BAD_OBJECTS = [
+  [ 1, 2, 3, 4 ],
+  'just a string',
+  function () {},
+];
 
 const VALID =  {
   recipient: [GOOD_EMAILS, GOOD_HASHES],
@@ -107,6 +116,7 @@ const VALID =  {
   evidence: [GOOD_URLS],
   expires: [GOOD_TIMES],
   issued_on: [GOOD_TIMES],
+  badge: [GOOD_OBJECTS],
 };
 const INVALID = {
   recipient: [BAD_STRINGS, BAD_EMAILS, BAD_HASHES],
@@ -114,6 +124,7 @@ const INVALID = {
   evidence: [BAD_STRINGS, BAD_URLS],
   expires: [BAD_STRINGS, BAD_TIMES],
   issued_on: [BAD_STRINGS, BAD_TIMES],
+  badge: [BAD_OBJECTS],
 };
 
 function flatten(arry) {
@@ -161,4 +172,4 @@ testInvalid('salt'); testValid('salt');
 testInvalid('evidence'); testValid('evidence');
 testInvalid('expires'); testValid('expires');
 testInvalid('issued_on'); testValid('issued_on');
-testInvalid('badge'); testInvalid('badge');
+testInvalid('badge'); testValid('badge');

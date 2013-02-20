@@ -7,6 +7,13 @@ const re = {
   emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
 }
 
+function isObject(thing) {
+  return (
+    typeof thing === 'object' &&
+    !Array.isArray(thing)
+  )
+}
+
 function validateStructure(badgeObj) {
   const errs = [];
   if (!re.emailOrHash.test(badgeObj.recipient))
@@ -39,6 +46,11 @@ function validateStructure(badgeObj) {
       msg: 'must be a unix timestamp or ISO 8601 date string'
     });
 
+  if (!isObject(badgeObj.badge))
+    errs.push({
+      field: 'badge',
+      msg: 'must be an object'
+    });
 
   return errs;
 };
