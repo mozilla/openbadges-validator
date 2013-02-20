@@ -105,6 +105,11 @@ function validateStructure(assertion) {
     msg: 'must be a url'
   });
 
+  testRequired(badge.criteria, isFormat(re.url), {
+    field: 'badge.criteria',
+    msg: 'must be a url'
+  });
+
   return errs;
 };
 

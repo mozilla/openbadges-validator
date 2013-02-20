@@ -133,6 +133,7 @@ const VALID =  {
   'badge.name': [GOOD_STRINGS],
   'badge.description': [GOOD_STRINGS],
   'badge.image': [GOOD_URLS],
+  'badge.criteria': [GOOD_URLS],
 };
 const INVALID = {
   recipient: [BAD_STRINGS, BAD_EMAILS, BAD_HASHES],
@@ -145,6 +146,7 @@ const INVALID = {
   'badge.name': [BAD_STRINGS],
   'badge.description': [BAD_STRINGS],
   'badge.image': [BAD_STRINGS, BAD_URLS],
+  'badge.criteria': [BAD_STRINGS, BAD_URLS],
 };
 
 function flatten(arry) {
@@ -235,3 +237,4 @@ testOptionalField('badge.version');
 testRequiredField('badge.name');
 testRequiredField('badge.description');
 testRequiredField('badge.image');
+testRequiredField('badge.criteria');
