@@ -1,5 +1,6 @@
 const re = {
   url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
+  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
   email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
   origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
   version: /^v?\d+\.\d+(\.\d+)?$/,
@@ -48,7 +49,23 @@ function makeRequiredValidator(errors) {
   }
 }
 
-function validateStructure(assertion) {
+function validateStructure(assertion){
+  const badgeField = assertion.badge;
+  if (isObject(badgeField))
+    return validateOldStructure(assertion);
+  if (re.absoluteUrl.test(badgeField))
+    return validateNewStructure(assertion);
+  return [{
+    field: 'general',
+    msg: 'cannot determine assertion type'
+  }];
+}
+
+function validateNewStructure(assertion) {
+  return [];
+}
+
+function validateOldStructure(assertion) {
   const errs = [];
   const badge = assertion.badge || {};
   const issuer = badge.issuer || {};

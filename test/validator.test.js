@@ -19,34 +19,60 @@ function objReplace(obj, dotString, value) {
   return ref;
 }
 
-function oldBadge(replacements) {
+function replaceAll(obj, replacements) {
   replacements = replacements || {};
-  const badge = {
-    recipient: sha('brian@mozillafoundation.org', 'seasalt'),
-    salt: 'seasalt',
-    evidence: 'https://example.org',
-    expires: '2013-06-06',
-    issued_on: '2013-01-01',
-    badge: {
-      version: '0.5.0',
-      criteria: '/criteria',
-      image: '/image.png',
-      name: 'Some Awesome Badge',
-      description: 'This is a description',
-      issuer: {
-        origin: 'https://example.org',
-        name: 'Example',
-        org: 'Organization',
-        contact: 'guy@example.org',
-      },
-    },
-  };
   Object.keys(replacements).forEach(function (dotString) {
     const value = replacements[dotString];
-    objReplace(badge, dotString, value);
+    objReplace(obj, dotString, value);
   });
-  return badge;
+  return obj;
 }
+
+const BADGE_GENERATORS = {
+  '0.5.0' : function oldBadge(replacements) {
+    return replaceAll({
+      recipient: sha('brian@mozillafoundation.org', 'seasalt'),
+      salt: 'seasalt',
+      evidence: 'https://example.org',
+      expires: '2013-06-06',
+      issued_on: '2013-01-01',
+      badge: {
+        version: '0.5.0',
+        criteria: '/criteria',
+        image: '/image.png',
+        name: 'Some Awesome Badge',
+        description: 'This is a description',
+        issuer: {
+          origin: 'https://example.org',
+          name: 'Example',
+          org: 'Organization',
+          contact: 'guy@example.org',
+        },
+      },
+    }, replacements);
+  },
+  '1.0.0': function newBadge(replacements) {
+    return replaceAll({
+      uid: 'd3c4ff',
+      recipient: {
+        identity: sha('brian@mozillafoundation.org', 'seasalt'),
+        salt: 'seasalt',
+        hashed: true,
+        type: 'email'
+      },
+      verify: {
+        type: 'hosted',
+        url: 'https://example.org/assertion.json'
+      },
+      badge: 'https://example.org/badge.json',
+      issuedOn: '2013-02-18T18:10+0500',
+      image: 'https://example.org/image.png',
+      evidence: 'https://example.org/evidence.html',
+      expires: '2014-02-18T18:10+0500',
+    }, replacements);
+  }
+};
+
 
 const BAD_STRINGS = [
   ['not', 'a', 'string'],
@@ -180,12 +206,12 @@ function flatten(arry) {
   }, []);
 }
 
-function testInvalid(field) {
+function testInvalid(field, assertionGenerator) {
   flatten(INVALID[field]).forEach(function (val) {
     test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
-      const badge = oldBadge(replacement);
+      const badge = assertionGenerator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
       t.same(result.length, 1, 'should one errors');
@@ -195,12 +221,12 @@ function testInvalid(field) {
   });
 }
 
-function testValid(field) {
+function testValid(field, assertionGenerator) {
   flatten(VALID[field]).forEach(function (val) {
     test('0.5.0 badges: valid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
-      const badge = oldBadge(replacement);
+      const badge = assertionGenerator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
       t.same(result.length, 0, 'should no errors');
@@ -209,21 +235,22 @@ function testValid(field) {
   });
 }
 
-function testOptional(field) {
+function testOptional(field, assertionGenerator) {
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {};
     replacement[field] = null;
-    const badge = oldBadge(replacement);
+    const badge = assertionGenerator(replacement);
     const result = validator.structure(badge);
     t.same(result.length, 0, 'should no errors');
     t.end();
   });
 }
-function testRequired(field) {
+
+function testRequired(field, assertionGenerator) {
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {};
     replacement[field] = null;
-    const badge = oldBadge(replacement);
+    const badge = assertionGenerator(replacement);
     const result = validator.structure(badge);
     t.same(result.length, 1, 'should one errors');
     t.same(result[0].field, field, 'should be `'+field+'` error');
@@ -231,45 +258,57 @@ function testRequired(field) {
   });
 }
 
-function testRequiredField(field) {
-  testRequired(field);
-  testInvalid(field);
-  testValid(field);
+function testRequiredField(assertionGenerator, field) {
+  testRequired(field, assertionGenerator);
+  testInvalid(field, assertionGenerator);
+  testValid(field, assertionGenerator);
 }
-function testOptionalField(field) {
-  testOptional(field);
-  testInvalid(field);
-  testValid(field);
+function testOptionalField(assertionGenerator, field) {
+  testOptional(field, assertionGenerator);
+  testInvalid(field, assertionGenerator);
+  testValid(field, assertionGenerator);
 }
-function testObjectField(field) {
-  testRequired(field);
-  testInvalid(field);
+function testObjectField(assertionGenerator, field) {
+  testRequired(field, assertionGenerator);
+  testInvalid(field, assertionGenerator);
 }
 
 test('0.5.0 badges: no errors', function (t) {
-  const badge = oldBadge();
+  const badge = BADGE_GENERATORS['0.5.0']();
   const result = validator.structure(badge);
   t.same(result.length, 0, 'should have zero errors');
   t.end();
 });
 
-testOptionalField('salt');
-testOptionalField('evidence');
-testOptionalField('expires');
-testOptionalField('issued_on');
-testRequiredField('recipient');
+test('0.5.0 badges with errors', function (t) {
+  const optional = testOptionalField.bind(null, BADGE_GENERATORS['0.5.0']);
+  const required = testRequiredField.bind(null, BADGE_GENERATORS['0.5.0']);
+  const object = testObjectField.bind(null, BADGE_GENERATORS['0.5.0']);
 
-testObjectField('badge');
+  optional('salt');
+  optional('evidence');
+  optional('expires');
+  optional('issued_on');
+  required('recipient');
 
-testRequiredField('badge.name');
-testRequiredField('badge.description');
-testRequiredField('badge.image');
-testRequiredField('badge.criteria');
-testOptionalField('badge.version');
+  required('badge.name');
+  required('badge.description');
+  required('badge.image');
+  required('badge.criteria');
+  optional('badge.version');
 
-testObjectField('badge.issuer');
+  object('badge.issuer');
 
-testRequiredField('badge.issuer.name');
-testRequiredField('badge.issuer.contact');
-testRequiredField('badge.issuer.origin');
-testOptionalField('badge.issuer.org');
+  required('badge.issuer.name');
+  required('badge.issuer.contact');
+  required('badge.issuer.origin');
+  optional('badge.issuer.org');
+  t.end();
+});
+
+test('1.0.0 badges: no errors', function (t) {
+  const badge = BADGE_GENERATORS['1.0.0']();
+  const result = validator.structure(badge);
+  t.same(result.length, 0, 'should have zero errors');
+  t.end();
+});
