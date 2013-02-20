@@ -109,6 +109,18 @@ const BAD_OBJECTS = [
   'just a string',
   function () {},
 ];
+const BAD_VERSIONS = [
+  'v100',
+  '50',
+  'v10.1alpha',
+  '1.2.x'
+];
+const GOOD_VERSIONS = [
+  '0.1.1',
+  '2.0.1',
+  '1.2.3',
+  'v1.2.1'
+];
 
 const VALID =  {
   recipient: [GOOD_EMAILS, GOOD_HASHES],
@@ -117,6 +129,9 @@ const VALID =  {
   expires: [GOOD_TIMES],
   issued_on: [GOOD_TIMES],
   badge: [GOOD_OBJECTS],
+  'badge.version': [GOOD_VERSIONS],
+  'badge.name': [GOOD_STRINGS],
+  'badge.description': [GOOD_STRINGS],
 };
 const INVALID = {
   recipient: [BAD_STRINGS, BAD_EMAILS, BAD_HASHES],
@@ -125,6 +140,9 @@ const INVALID = {
   expires: [BAD_STRINGS, BAD_TIMES],
   issued_on: [BAD_STRINGS, BAD_TIMES],
   badge: [BAD_OBJECTS],
+  'badge.version': [BAD_STRINGS, BAD_VERSIONS],
+  'badge.name': [BAD_STRINGS],
+  'badge.description': [BAD_STRINGS],
 };
 
 function flatten(arry) {
@@ -140,6 +158,7 @@ function testInvalid(field) {
       replacement[field] = val;
       const badge = oldBadge(replacement);
       const result = validator.structure(badge);
+      console.dir(result);
       t.same(result.length, 1, 'should one errors');
       t.same(result[0].field, field, 'should be `'+field+'` error');
       t.end();
@@ -154,10 +173,44 @@ function testValid(field) {
       replacement[field] = val;
       const badge = oldBadge(replacement);
       const result = validator.structure(badge);
+      console.dir(result);
       t.same(result.length, 0, 'should no errors');
       t.end();
     });
   });
+}
+
+function testOptional(field) {
+  test('0.5.0 badges: missing '+field, function (t) {
+    const replacement = {};
+    replacement[field] = null;
+    const badge = oldBadge(replacement);
+    const result = validator.structure(badge);
+    t.same(result.length, 0, 'should no errors');
+    t.end();
+  });
+}
+function testRequired(field) {
+  test('0.5.0 badges: missing '+field, function (t) {
+    const replacement = {};
+    replacement[field] = null;
+    const badge = oldBadge(replacement);
+    const result = validator.structure(badge);
+    t.same(result.length, 1, 'should one errors');
+    t.same(result[0].field, field, 'should be `'+field+'` error');
+    t.end();
+  });
+}
+
+function testRequiredField(field) {
+  testRequired(field);
+  testInvalid(field);
+  testValid(field);
+}
+function testOptionalField(field) {
+  testOptional(field);
+  testInvalid(field);
+  testValid(field);
 }
 
 test('0.5.0 badges: no errors', function (t) {
@@ -167,9 +220,15 @@ test('0.5.0 badges: no errors', function (t) {
   t.end();
 });
 
-testInvalid('recipient'); testValid('recipient');
-testInvalid('salt'); testValid('salt');
-testInvalid('evidence'); testValid('evidence');
-testInvalid('expires'); testValid('expires');
-testInvalid('issued_on'); testValid('issued_on');
-testInvalid('badge'); testValid('badge');
+testRequiredField('recipient');
+testOptionalField('salt');
+testOptionalField('evidence');
+testOptionalField('expires');
+testOptionalField('issued_on');
+
+testRequired('badge');
+testInvalid('badge');
+
+testOptionalField('badge.version');
+testRequiredField('badge.name');
+testRequiredField('badge.description');
