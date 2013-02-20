@@ -27,6 +27,19 @@ function validateStructure(badgeObj) {
       msg: 'must be a URL'
     });
 
+  if (!re.date.test(badgeObj.expires))
+    errs.push({
+      field: 'expires',
+      msg: 'must be a unix timestamp or ISO 8601 date string'
+    });
+
+  if (!re.date.test(badgeObj.issued_on))
+    errs.push({
+      field: 'issued_on',
+      msg: 'must be a unix timestamp or ISO 8601 date string'
+    });
+
+
   return errs;
 };
 

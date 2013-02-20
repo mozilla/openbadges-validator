@@ -88,26 +88,42 @@ const BAD_URLS = [
   '@.com:90/',
   'just totally wrong'
 ];
+const GOOD_TIMES = [
+  Date.now()/1000 | 0,
+  '2012-01-01'
+];
+const BAD_TIMES = [
+  'oiajsd09gjas;oj09',
+  'foreever ago',
+  '@.com:90/',
+  '2001-10-190-19',
+  '901d1',
+  '000000000000000000000'
+];
+
 const VALID =  {
-  recipient: GOOD_EMAILS.concat(GOOD_HASHES),
-  salt: GOOD_STRINGS,
-  evidence: GOOD_URLS,
+  recipient: [GOOD_EMAILS, GOOD_HASHES],
+  salt: [GOOD_STRINGS],
+  evidence: [GOOD_URLS],
+  expires: [GOOD_TIMES],
+  issued_on: [GOOD_TIMES],
 };
 const INVALID = {
-  recipient: BAD_EMAILS.concat(BAD_HASHES),
-  salt: BAD_STRINGS,
-  evidence: BAD_URLS,
+  recipient: [BAD_STRINGS, BAD_EMAILS, BAD_HASHES],
+  salt: [BAD_STRINGS],
+  evidence: [BAD_STRINGS, BAD_URLS],
+  expires: [BAD_STRINGS, BAD_TIMES],
+  issued_on: [BAD_STRINGS, BAD_TIMES],
 };
 
-test('0.5.0 badges: no errors', function (t) {
-  const badge = oldBadge();
-  const result = validator.structure(badge);
-  t.same(result.length, 0, 'should have zero errors');
-  t.end();
-});
+function flatten(arry) {
+  return arry.reduce(function (coll, intArr) {
+    return coll.concat(intArr);
+  }, []);
+}
 
 function testInvalid(field) {
-  INVALID[field].forEach(function (val) {
+  flatten(INVALID[field]).forEach(function (val) {
     test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
@@ -121,7 +137,7 @@ function testInvalid(field) {
 }
 
 function testValid(field) {
-  VALID[field].forEach(function (val) {
+  flatten(VALID[field]).forEach(function (val) {
     test('0.5.0 badges: valid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
@@ -133,6 +149,16 @@ function testValid(field) {
   });
 }
 
+test('0.5.0 badges: no errors', function (t) {
+  const badge = oldBadge();
+  const result = validator.structure(badge);
+  t.same(result.length, 0, 'should have zero errors');
+  t.end();
+});
+
 testInvalid('recipient'); testValid('recipient');
 testInvalid('salt'); testValid('salt');
 testInvalid('evidence'); testValid('evidence');
+testInvalid('expires'); testValid('expires');
+testInvalid('issued_on'); testValid('issued_on');
+testInvalid('badge'); testInvalid('badge');
