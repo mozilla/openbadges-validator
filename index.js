@@ -110,6 +110,30 @@ function validateStructure(assertion) {
     msg: 'must be a url'
   });
 
+  if (!testRequired(badge.issuer, isObject, {
+    field: 'badge.issuer',
+    msg: 'must be an object'
+  })) return errs;
+
+  testRequired(issuer.name, isString, {
+    field: 'badge.issuer.name',
+    msg: 'must be a string'
+  });
+
+  testRequired(issuer.contact, isFormat(re.email), {
+    field: 'badge.issuer.contact',
+    msg: 'must be an email address'
+  });
+
+  testRequired(issuer.origin, isFormat(re.origin), {
+    field: 'badge.issuer.origin',
+    msg: 'must be an origin'
+  });
+
+  testOptional(issuer.org, isString, {
+    field: 'badge.issuer.org',
+    msg: 'must be a string'
+  });
   return errs;
 };
 

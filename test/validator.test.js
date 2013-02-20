@@ -121,6 +121,21 @@ const GOOD_VERSIONS = [
   '1.2.3',
   'v1.2.1'
 ];
+const GOOD_ORIGINS = [
+  'http://example.com',
+  'https://example.com:80',
+  'https://www.example.com',
+  'https://www.example.com:8080',
+  'http://example.com/'
+];
+const BAD_ORIGINS = [
+  '-not-asdo',
+  'ftp://bad-scheme',
+  '@.com:90/',
+  'just totally wrong',
+  'http://example.com/what',
+  'http://example.com:8080/false'
+];
 
 const VALID =  {
   recipient: [GOOD_EMAILS, GOOD_HASHES],
@@ -134,6 +149,11 @@ const VALID =  {
   'badge.description': [GOOD_STRINGS],
   'badge.image': [GOOD_URLS],
   'badge.criteria': [GOOD_URLS],
+  'badge.issuer': [GOOD_OBJECTS],
+  'badge.issuer.name': [GOOD_STRINGS],
+  'badge.issuer.contact': [GOOD_EMAILS],
+  'badge.issuer.origin': [GOOD_ORIGINS],
+  'badge.issuer.org': [GOOD_STRINGS],
 };
 const INVALID = {
   recipient: [BAD_STRINGS, BAD_EMAILS, BAD_HASHES],
@@ -147,6 +167,11 @@ const INVALID = {
   'badge.description': [BAD_STRINGS],
   'badge.image': [BAD_STRINGS, BAD_URLS],
   'badge.criteria': [BAD_STRINGS, BAD_URLS],
+  'badge.issuer': [BAD_OBJECTS],
+  'badge.issuer.name': [BAD_STRINGS],
+  'badge.issuer.contact': [BAD_STRINGS, BAD_EMAILS],
+  'badge.issuer.origin': [BAD_STRINGS, BAD_ORIGINS],
+  'badge.issuer.org': [BAD_STRINGS],
 };
 
 function flatten(arry) {
@@ -216,6 +241,10 @@ function testOptionalField(field) {
   testInvalid(field);
   testValid(field);
 }
+function testObjectField(field) {
+  testRequired(field);
+  testInvalid(field);
+}
 
 test('0.5.0 badges: no errors', function (t) {
   const badge = oldBadge();
@@ -224,17 +253,23 @@ test('0.5.0 badges: no errors', function (t) {
   t.end();
 });
 
-testRequiredField('recipient');
 testOptionalField('salt');
 testOptionalField('evidence');
 testOptionalField('expires');
 testOptionalField('issued_on');
+testRequiredField('recipient');
 
-testRequired('badge');
-testInvalid('badge');
+testObjectField('badge');
 
-testOptionalField('badge.version');
 testRequiredField('badge.name');
 testRequiredField('badge.description');
 testRequiredField('badge.image');
 testRequiredField('badge.criteria');
+testOptionalField('badge.version');
+
+testObjectField('badge.issuer');
+
+testRequiredField('badge.issuer.name');
+testRequiredField('badge.issuer.contact');
+testRequiredField('badge.issuer.origin');
+testOptionalField('badge.issuer.org');
