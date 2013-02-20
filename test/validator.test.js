@@ -1,33 +1,6 @@
 const test = require('tap').test;
 const validator = require('..');
 
-function sha(string, salt) {
-  const hasher = require('crypto').createHash('sha256');
-  hasher.update('brian@mozillafoundation.org' + (salt||''));
-  return 'sha256$' + hasher.digest('hex');
-}
-
-function objReplace(obj, dotString, value) {
-  const keys = dotString.split('.');
-  const target = keys.pop();
-  const ref = keys.reduce(function (obj, key) {
-    if (obj[key])
-      return obj[key]
-    return (obj[key] = {});
-  }, obj);
-  ref[target] = value;
-  return ref;
-}
-
-function replaceAll(obj, replacements) {
-  replacements = replacements || {};
-  Object.keys(replacements).forEach(function (dotString) {
-    const value = replacements[dotString];
-    objReplace(obj, dotString, value);
-  });
-  return obj;
-}
-
 const BADGE_GENERATORS = {
   '0.5.0' : function oldBadge(replacements) {
     return replaceAll({
@@ -51,7 +24,7 @@ const BADGE_GENERATORS = {
       },
     }, replacements);
   },
-  '1.0.0': function newBadge(replacements) {
+  '1.0.0-assertion': function newBadge(replacements) {
     return replaceAll({
       uid: 'd3c4ff',
       recipient: {
@@ -215,23 +188,40 @@ const TEST_DATA = {
       'badge.issuer.origin': [STRINGS.bad, ORIGINS.bad],
       'badge.issuer.org': [STRINGS.bad],
     }
+  },
+  '1.0.0-assertion': {
+    valid: {
+      uid: [STRINGS.good]
+    },
+    invalid: {
+      uid: [STRINGS.bad]
+    }
   }
 };
 
-function flatten(arry) {
-  return arry.reduce(function (coll, intArr) {
-    return coll.concat(intArr);
-  }, []);
-}
+/** Test macros
+ *
+ * In the following methods, `options` is always expected to have the
+ * following properties:
+ *
+ *   - `data`: object with two properties, `valid` and `invalid`. Each of
+ *       those should be objects with properties for each expected
+ *       assertion field. The values of those properties should be an
+ *       array of arrays where the internal arrays are either `valid` or
+ *       `invalid` values to test against.
+ *   - `generator`: a function that generates a badge with the expected
+ *       signature `function (replacements) { }`, where `replacements` is
+ *       an object containing fields and values to use in place of the
+ *       defaults from the generator.
+ *
+ */
 
-function testInvalid(field, version) {
-  const INVALID = TEST_DATA[version].invalid;
-  const assertionGenerator = BADGE_GENERATORS[version];
-  flatten(INVALID[field]).forEach(function (val) {
+function testInvalid(options, field) {
+  flatten(options.data.invalid[field]).forEach(function (val) {
     test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
-      const badge = assertionGenerator(replacement);
+      const badge = options.generator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
       t.same(result.length, 1, 'should one errors');
@@ -240,15 +230,12 @@ function testInvalid(field, version) {
     });
   });
 }
-
-function testValid(field, version) {
-  const VALID = TEST_DATA[version].valid;
-  const assertionGenerator = BADGE_GENERATORS[version];
-  flatten(VALID[field]).forEach(function (val) {
+function testValid(options, field) {
+  flatten(options.data.valid[field]).forEach(function (val) {
     test('0.5.0 badges: valid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
-      const badge = assertionGenerator(replacement);
+      const badge = options.generator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
       t.same(result.length, 0, 'should no errors');
@@ -256,46 +243,41 @@ function testValid(field, version) {
     });
   });
 }
-
-function testOptional(field, version) {
-  const assertionGenerator = BADGE_GENERATORS[version];
+function testOptional(options, field) {
   test('0.5.0 badges: missing '+field, function (t) {
-    const replacement = {};
-    replacement[field] = null;
-    const badge = assertionGenerator(replacement);
+    const replacement = {}; replacement[field] = null;
+    const badge = options.generator(replacement);
     const result = validator.structure(badge);
     t.same(result.length, 0, 'should no errors');
     t.end();
   });
 }
-
-function testRequired(field, version) {
-  const assertionGenerator = BADGE_GENERATORS[version];
+function testRequired(options, field) {
   test('0.5.0 badges: missing '+field, function (t) {
-    const replacement = {};
-    replacement[field] = null;
-    const badge = assertionGenerator(replacement);
+    const replacement = {}; replacement[field] = null;
+    const badge = options.generator(replacement);
     const result = validator.structure(badge);
     t.same(result.length, 1, 'should one errors');
     t.same(result[0].field, field, 'should be `'+field+'` error');
     t.end();
   });
 }
+function testRequiredField(options, field) {
+  testRequired(options, field);
+  testInvalid(options, field);
+  testValid(options, field);
+}
+function testOptionalField(options, field) {
+  testOptional(options, field);
+  testInvalid(options, field);
+  testValid(options, field);
+}
+function testObjectField(options, field) {
+  testRequired(options, field);
+  testInvalid(options, field);
+}
 
-function testRequiredField(version, field) {
-  testRequired(field, version);
-  testInvalid(field, version);
-  testValid(field, version);
-}
-function testOptionalField(version, field) {
-  testOptional(field, version);
-  testInvalid(field, version);
-  testValid(field, version);
-}
-function testObjectField(version, field) {
-  testRequired(field, version);
-  testInvalid(field, version);
-}
+/** Actual tests */
 
 test('0.5.0 badges: no errors', function (t) {
   const badge = BADGE_GENERATORS['0.5.0']();
@@ -306,9 +288,13 @@ test('0.5.0 badges: no errors', function (t) {
 
 test('0.5.0 badges with errors', function (t) {
   const version = '0.5.0';
-  const optional = testOptionalField.bind(null, version);
-  const required = testRequiredField.bind(null, version);
-  const object = testObjectField.bind(null, version);
+  const options = {
+    generator: BADGE_GENERATORS[version],
+    data: TEST_DATA[version]
+  }
+  const optional = testOptionalField.bind(null, options);
+  const required = testRequiredField.bind(null, options);
+  const object = testObjectField.bind(null, options);
 
   optional('salt');
   optional('evidence');
@@ -331,9 +317,73 @@ test('0.5.0 badges with errors', function (t) {
   t.end();
 });
 
-test('1.0.0 badges: no errors', function (t) {
-  const badge = BADGE_GENERATORS['1.0.0']();
+test('1.0.0-assertion: no errors', function (t) {
+  const badge = BADGE_GENERATORS['1.0.0-assertion']();
   const result = validator.structure(badge);
   t.same(result.length, 0, 'should have zero errors');
   t.end();
 });
+
+
+test('1.0.0-assertion: some errors', function (t) {
+  const version = '1.0.0-assertion';
+  const options = {
+    generator: BADGE_GENERATORS[version],
+    data: TEST_DATA[version]
+  }
+  const optional = testOptionalField.bind(null, options);
+  const required = testRequiredField.bind(null, options);
+  const object = testObjectField.bind(null, options);
+
+  required('uid');
+
+  t.end();
+});
+
+
+/** utility methods */
+
+function sha(string, salt) {
+  const hasher = require('crypto').createHash('sha256');
+  hasher.update('brian@mozillafoundation.org' + (salt||''));
+  return 'sha256$' + hasher.digest('hex');
+}
+
+function objReplace(obj, dotString, value) {
+  const keys = dotString.split('.');
+  const target = keys.pop();
+  const ref = keys.reduce(function (obj, key) {
+    if (obj[key])
+      return obj[key]
+    return (obj[key] = {});
+  }, obj);
+  ref[target] = value;
+  return ref;
+}
+
+function replaceAll(obj, replacements) {
+  replacements = replacements || {};
+  Object.keys(replacements).forEach(function (dotString) {
+    const value = replacements[dotString];
+    objReplace(obj, dotString, value);
+  });
+  return obj;
+}
+
+
+/**
+ * Take an array of arrays and turn it into an array of the values of the
+ * deeper array. E.g,
+ *
+ * ```js
+ *  flatter([[1, 2], [3, 4]]) // -> [1,2,3,4]
+ * ```
+ *
+ * @return {Array}
+ */
+function flatten(arry) {
+  return arry.reduce(function (coll, intArr) {
+    return coll.concat(intArr);
+  }, []);
+}
+

@@ -62,7 +62,16 @@ function validateStructure(assertion){
 }
 
 function validateNewStructure(assertion) {
-  return [];
+  const errs = [];
+  const testOptional = makeOptionalValidator(errs);
+  const testRequired = makeRequiredValidator(errs);
+
+  testRequired(assertion.uid, isString, {
+    field: 'uid',
+    msg: 'must be a string'
+  });
+
+  return errs;
 }
 
 function validateOldStructure(assertion) {
