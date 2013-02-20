@@ -177,41 +177,45 @@ const ORIGINS = {
   ]
 };
 
-const VALID =  {
-  recipient: [EMAILS.good, HASHES.good],
-  salt: [STRINGS.good],
-  evidence: [URLS.good],
-  expires: [TIMES.good],
-  issued_on: [TIMES.good],
-  badge: [OBJECTS.good],
-  'badge.version': [VERSIONS.good],
-  'badge.name': [STRINGS.good],
-  'badge.description': [STRINGS.good],
-  'badge.image': [URLS.good],
-  'badge.criteria': [URLS.good],
-  'badge.issuer': [OBJECTS.good],
-  'badge.issuer.name': [STRINGS.good],
-  'badge.issuer.contact': [EMAILS.good],
-  'badge.issuer.origin': [ORIGINS.good],
-  'badge.issuer.org': [STRINGS.good],
-};
-const INVALID = {
-  recipient: [STRINGS.bad, EMAILS.bad, HASHES.bad],
-  salt: [STRINGS.bad],
-  evidence: [STRINGS.bad, URLS.bad],
-  expires: [STRINGS.bad, TIMES.bad],
-  issued_on: [STRINGS.bad, TIMES.bad],
-  badge: [OBJECTS.bad],
-  'badge.version': [STRINGS.bad, VERSIONS.bad],
-  'badge.name': [STRINGS.bad],
-  'badge.description': [STRINGS.bad],
-  'badge.image': [STRINGS.bad, URLS.bad],
-  'badge.criteria': [STRINGS.bad, URLS.bad],
-  'badge.issuer': [OBJECTS.bad],
-  'badge.issuer.name': [STRINGS.bad],
-  'badge.issuer.contact': [STRINGS.bad, EMAILS.bad],
-  'badge.issuer.origin': [STRINGS.bad, ORIGINS.bad],
-  'badge.issuer.org': [STRINGS.bad],
+const TEST_DATA = {
+  '0.5.0': {
+    valid: {
+      recipient: [EMAILS.good, HASHES.good],
+      salt: [STRINGS.good],
+      evidence: [URLS.good],
+      expires: [TIMES.good],
+      issued_on: [TIMES.good],
+      badge: [OBJECTS.good],
+      'badge.version': [VERSIONS.good],
+      'badge.name': [STRINGS.good],
+      'badge.description': [STRINGS.good],
+      'badge.image': [URLS.good],
+      'badge.criteria': [URLS.good],
+      'badge.issuer': [OBJECTS.good],
+      'badge.issuer.name': [STRINGS.good],
+      'badge.issuer.contact': [EMAILS.good],
+      'badge.issuer.origin': [ORIGINS.good],
+      'badge.issuer.org': [STRINGS.good],
+    },
+    invalid: {
+      recipient: [STRINGS.bad, EMAILS.bad, HASHES.bad],
+      salt: [STRINGS.bad],
+      evidence: [STRINGS.bad, URLS.bad],
+      expires: [STRINGS.bad, TIMES.bad],
+      issued_on: [STRINGS.bad, TIMES.bad],
+      badge: [OBJECTS.bad],
+      'badge.version': [STRINGS.bad, VERSIONS.bad],
+      'badge.name': [STRINGS.bad],
+      'badge.description': [STRINGS.bad],
+      'badge.image': [STRINGS.bad, URLS.bad],
+      'badge.criteria': [STRINGS.bad, URLS.bad],
+      'badge.issuer': [OBJECTS.bad],
+      'badge.issuer.name': [STRINGS.bad],
+      'badge.issuer.contact': [STRINGS.bad, EMAILS.bad],
+      'badge.issuer.origin': [STRINGS.bad, ORIGINS.bad],
+      'badge.issuer.org': [STRINGS.bad],
+    }
+  }
 };
 
 function flatten(arry) {
@@ -220,7 +224,9 @@ function flatten(arry) {
   }, []);
 }
 
-function testInvalid(field, assertionGenerator) {
+function testInvalid(field, version) {
+  const INVALID = TEST_DATA[version].invalid;
+  const assertionGenerator = BADGE_GENERATORS[version];
   flatten(INVALID[field]).forEach(function (val) {
     test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
@@ -235,7 +241,9 @@ function testInvalid(field, assertionGenerator) {
   });
 }
 
-function testValid(field, assertionGenerator) {
+function testValid(field, version) {
+  const VALID = TEST_DATA[version].valid;
+  const assertionGenerator = BADGE_GENERATORS[version];
   flatten(VALID[field]).forEach(function (val) {
     test('0.5.0 badges: valid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
@@ -249,7 +257,8 @@ function testValid(field, assertionGenerator) {
   });
 }
 
-function testOptional(field, assertionGenerator) {
+function testOptional(field, version) {
+  const assertionGenerator = BADGE_GENERATORS[version];
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {};
     replacement[field] = null;
@@ -260,7 +269,8 @@ function testOptional(field, assertionGenerator) {
   });
 }
 
-function testRequired(field, assertionGenerator) {
+function testRequired(field, version) {
+  const assertionGenerator = BADGE_GENERATORS[version];
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {};
     replacement[field] = null;
@@ -272,19 +282,19 @@ function testRequired(field, assertionGenerator) {
   });
 }
 
-function testRequiredField(assertionGenerator, field) {
-  testRequired(field, assertionGenerator);
-  testInvalid(field, assertionGenerator);
-  testValid(field, assertionGenerator);
+function testRequiredField(version, field) {
+  testRequired(field, version);
+  testInvalid(field, version);
+  testValid(field, version);
 }
-function testOptionalField(assertionGenerator, field) {
-  testOptional(field, assertionGenerator);
-  testInvalid(field, assertionGenerator);
-  testValid(field, assertionGenerator);
+function testOptionalField(version, field) {
+  testOptional(field, version);
+  testInvalid(field, version);
+  testValid(field, version);
 }
-function testObjectField(assertionGenerator, field) {
-  testRequired(field, assertionGenerator);
-  testInvalid(field, assertionGenerator);
+function testObjectField(version, field) {
+  testRequired(field, version);
+  testInvalid(field, version);
 }
 
 test('0.5.0 badges: no errors', function (t) {
@@ -295,9 +305,10 @@ test('0.5.0 badges: no errors', function (t) {
 });
 
 test('0.5.0 badges with errors', function (t) {
-  const optional = testOptionalField.bind(null, BADGE_GENERATORS['0.5.0']);
-  const required = testRequiredField.bind(null, BADGE_GENERATORS['0.5.0']);
-  const object = testObjectField.bind(null, BADGE_GENERATORS['0.5.0']);
+  const version = '0.5.0';
+  const optional = testOptionalField.bind(null, version);
+  const required = testRequiredField.bind(null, version);
+  const object = testObjectField.bind(null, version);
 
   optional('salt');
   optional('evidence');
