@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - 0.8
+notifications:
+  irc:
+    - "irc.mozilla.org#badges"
+  email:
+    recipients:
+      - openbadges+ci@mozilla.com

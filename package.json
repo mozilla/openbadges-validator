@@ -1,0 +1,30 @@
+{
+  "name": "openbadges-validator",
+  "version": "0.0.1",
+  "description": "OpenBadges Validation Tools",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "nock": "~0.15.2"
+  },
+  "devDependencies": {
+    "tap": "~0.4.0"
+  },
+  "scripts": {
+    "test": "make"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mozilla/openbadges-validator.git"
+  },
+  "keywords": [
+    "openbadges",
+    "validation"
+  ],
+  "author": "Brian J. Brennan",
+  "license": "MPL 2.0",
+  "readmeFilename": "README.md",
+  "gitHead": "898ea511952e2eda151e484c0b074164139bbe3e"
+}
