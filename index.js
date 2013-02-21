@@ -1,3 +1,5 @@
+const dateutil = require('dateutil');
+
 const re = {
   url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
   absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
@@ -6,13 +8,16 @@ const re = {
   version: /^v?\d+\.\d+(\.\d+)?$/,
   date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
   emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
+  identityType: /^(email)$/i,
+  verifyType: /^(hosted)|(signed)$/i,
+  unixtime: /^1\d{9}$/,
 }
 
 function isObject(thing) {
   return (
-    thing &&
-    typeof thing === 'object' &&
-    !Array.isArray(thing)
+    thing
+    && typeof thing === 'object'
+    && !Array.isArray(thing)
   )
 }
 
@@ -23,6 +28,25 @@ function isString(thing) {
 function isFormat(format) {
   return function (thing) {
     return format.test(thing);
+  }
+}
+
+function isBoolean(thing) {
+  return (
+    typeof thing === 'boolean'
+    || /false/i.test(thing)
+    || /true/i.test(thing)
+  )
+}
+
+function isUnixOrISOTime(thing) {
+  if (re.unixtime.test(thing))
+    return true;
+  try {
+    const type = dateutil.parse(thing).type;
+    return type !== 'unknown_date';
+  } catch (e) {
+    return false;
   }
 }
 
@@ -41,7 +65,9 @@ function makeOptionalValidator(errors) {
 function makeRequiredValidator(errors) {
   errors = errors || [];
   return function required(value, test, errObj) {
-    if (!value || !test(value)) {
+    if (typeof value === 'undefined'
+        || value === null
+        || !test(value)) {
       errors.push(errObj);
       return false;
     }
@@ -53,24 +79,73 @@ function validateStructure(assertion){
   const badgeField = assertion.badge;
   if (isObject(badgeField))
     return validateOldStructure(assertion);
-  if (re.absoluteUrl.test(badgeField))
-    return validateNewStructure(assertion);
-  return [{
-    field: 'general',
-    msg: 'cannot determine assertion type'
-  }];
+  return validateNewStructure(assertion);
 }
 
 function validateNewStructure(assertion) {
   const errs = [];
+  const recipient = assertion.recipient || {};
+  const verify = assertion.verify || {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
+
+  // only test the internals of the `recipient` property if it's
+  // actually an object.
+  if (testRequired(assertion.recipient, isObject, {
+    field: 'recipient',
+    msg: 'must be an object'
+  })) {
+    testRequired(recipient.type, isFormat(re.identityType), {
+      field: 'recipient.type',
+      msg: 'must be `email`'
+    });
+
+    testRequired(recipient.identity, isString, {
+      field: 'recipient.identity',
+      msg: 'must be a string'
+    });
+
+    testRequired(recipient.hashed, isBoolean, {
+      field: 'recipient.hashed',
+      msg: 'must be either `true` or `false`'
+    });
+
+    testOptional(recipient.salt, isString, {
+      field: 'recipient.salt',
+      msg: 'must be a string'
+    });
+  }
+
+  // only test the internal properties of the `verify` property if it's
+  // actually an object.
+  if (testRequired(assertion.verify, isObject, {
+    field: 'verify',
+    msg: 'must be an object',
+  })) {
+    testRequired(verify.type, isFormat(re.verifyType), {
+      field: 'verify.type',
+      msg: 'must be either `\'hosted\'` or `\'signed\'`',
+    });
+    testRequired(verify.url, isFormat(re.absoluteUrl), {
+      field: 'verify.url',
+      msg: 'must be an absolute url',
+    });
+  }
 
   testRequired(assertion.uid, isString, {
     field: 'uid',
     msg: 'must be a string'
   });
 
+  testRequired(assertion.badge, isFormat(re.absoluteUrl), {
+    field: 'badge',
+    msg: 'must be an absolute url'
+  });
+
+  testRequired(assertion.issuedOn, isUnixOrISOTime, {
+    field: 'issuedOn',
+    msg: 'must be a unix timestamp or ISO8601 date string'
+  });
   return errs;
 }
 

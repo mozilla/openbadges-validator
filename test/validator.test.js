@@ -1,52 +1,6 @@
 const test = require('tap').test;
 const validator = require('..');
 
-const BADGE_GENERATORS = {
-  '0.5.0' : function oldBadge(replacements) {
-    return replaceAll({
-      recipient: sha('brian@mozillafoundation.org', 'seasalt'),
-      salt: 'seasalt',
-      evidence: 'https://example.org',
-      expires: '2013-06-06',
-      issued_on: '2013-01-01',
-      badge: {
-        version: '0.5.0',
-        criteria: '/criteria',
-        image: '/image.png',
-        name: 'Some Awesome Badge',
-        description: 'This is a description',
-        issuer: {
-          origin: 'https://example.org',
-          name: 'Example',
-          org: 'Organization',
-          contact: 'guy@example.org',
-        },
-      },
-    }, replacements);
-  },
-  '1.0.0-assertion': function newBadge(replacements) {
-    return replaceAll({
-      uid: 'd3c4ff',
-      recipient: {
-        identity: sha('brian@mozillafoundation.org', 'seasalt'),
-        salt: 'seasalt',
-        hashed: true,
-        type: 'email'
-      },
-      verify: {
-        type: 'hosted',
-        url: 'https://example.org/assertion.json'
-      },
-      badge: 'https://example.org/badge.json',
-      issuedOn: '2013-02-18T18:10+0500',
-      image: 'https://example.org/image.png',
-      evidence: 'https://example.org/evidence.html',
-      expires: '2014-02-18T18:10+0500',
-    }, replacements);
-  }
-};
-
-
 const STRINGS = {
   good: ['OH', 'hey'],
   bad: [
@@ -107,6 +61,28 @@ const TIMES = {
     '000000000000000000000'
   ]
 };
+const ISO8601 = {
+  good: [
+    '2013-02',
+    '2013-02-21',
+    '2013-02-21T15:18Z',
+    '2013-02-21T15:18-0500',
+    '2013-02-21T15:18.000-0500',
+    '201302',
+    '20130221',
+    '20130221T1518Z',
+    '20130221T1518-0500',
+    '20130221T1518.000-0500'
+  ],
+  bad: [
+    '20',
+    '2013022',
+    'January 12th',
+    '08/13/1985',
+    Date.now().toString()
+  ],
+};
+
 const OBJECTS = {
   good: [
     { something: 'yes' },
@@ -132,6 +108,14 @@ const VERSIONS = {
     '1.2.x'
   ]
 };
+const IDENTITY_TYPES = {
+  good: ['email', 'EMAIL', 'eMaIl'],
+  bad: ['anything else', 'facebook', 'twitter']
+};
+const VERIFY_TYPES = {
+  good: ['hosted', 'HOstED', 'signed', 'SIgnED'],
+  bad: ['implicit', 'word of mouth']
+};
 const ORIGINS = {
   good: [
     'http://example.com',
@@ -149,7 +133,24 @@ const ORIGINS = {
     'http://example.com:8080/false'
   ]
 };
-
+const BOOLEANS = {
+  good: [true, 'true', 'TrUE', false, 'false', 'FalSE'],
+  bad: ['not stuff', 'bad', 'definitely not a boolean'],
+};
+const ABSOLUTE_URLS = {
+  good: [
+    'https://example.org',
+    'http://example.co.uk/awesome',
+    'http://localhost:8080/rad?query=grand',
+    'https://example.org:443/this-is_/athing.json'
+  ],
+  bad: [
+    '/not-absolute',
+    'not even relative',
+    'ftp://example.org/wrong/scheme',
+    'gopher://for-real?',
+  ]
+};
 const TEST_DATA = {
   '0.5.0': {
     valid: {
@@ -191,13 +192,79 @@ const TEST_DATA = {
   },
   '1.0.0-assertion': {
     valid: {
-      uid: [STRINGS.good]
+      uid: [STRINGS.good],
+      recipient: [OBJECTS.good],
+      'recipient.type': [IDENTITY_TYPES.good],
+      'recipient.hashed': [BOOLEANS.good],
+      'recipient.salt': [STRINGS.good],
+      'recipient.identity': [STRINGS.good],
+      verify: [OBJECTS.good],
+      'verify.type': [VERIFY_TYPES.good],
+      'verify.url': [ABSOLUTE_URLS.good],
+      badge: [ABSOLUTE_URLS.good],
+      'issuedOn': [TIMES.good, ISO8601.good],
     },
     invalid: {
-      uid: [STRINGS.bad]
+      uid: [STRINGS.bad],
+      recipient: [OBJECTS.bad],
+      'recipient.type': [STRINGS.bad, IDENTITY_TYPES.bad],
+      'recipient.hashed': [STRINGS.bad, BOOLEANS.bad],
+      'recipient.salt': [STRINGS.bad],
+      'recipient.identity': [STRINGS.bad],
+      verify: [OBJECTS.bad],
+      'verify.type': [STRINGS.bad, VERIFY_TYPES.bad],
+      'verify.url': [STRINGS.bad, ABSOLUTE_URLS.bad],
+      badge: [ABSOLUTE_URLS.bad],
+      'issuedOn': [TIMES.bad, ISO8601.bad],
     }
   }
 };
+
+const BADGE_GENERATORS = {
+  '0.5.0' : function oldBadge(replacements) {
+    return replaceAll({
+      recipient: sha('brian@mozillafoundation.org', 'seasalt'),
+      salt: 'seasalt',
+      evidence: 'https://example.org',
+      expires: '2013-06-06',
+      issued_on: '2013-01-01',
+      badge: {
+        version: '0.5.0',
+        criteria: '/criteria',
+        image: '/image.png',
+        name: 'Some Awesome Badge',
+        description: 'This is a description',
+        issuer: {
+          origin: 'https://example.org',
+          name: 'Example',
+          org: 'Organization',
+          contact: 'guy@example.org',
+        },
+      },
+    }, replacements);
+  },
+  '1.0.0-assertion': function newBadge(replacements) {
+    return replaceAll({
+      uid: 'd3c4ff',
+      recipient: {
+        identity: sha('brian@mozillafoundation.org', 'seasalt'),
+        salt: 'seasalt',
+        hashed: true,
+        type: 'email'
+      },
+      verify: {
+        type: 'hosted',
+        url: 'https://example.org/assertion.json'
+      },
+      badge: 'https://example.org/badge.json',
+      issuedOn: '2013-02-18T18:10+0500',
+      image: 'https://example.org/image.png',
+      evidence: 'https://example.org/evidence.html',
+      expires: '2014-02-18T18:10+0500',
+    }, replacements);
+  }
+};
+
 
 /** Test macros
  *
@@ -217,28 +284,34 @@ const TEST_DATA = {
  */
 
 function testInvalid(options, field) {
-  flatten(options.data.invalid[field]).forEach(function (val) {
+  const data = options.data.invalid[field];
+  if (!data)
+    throw new Error('need to set up test data for invalid `'+field+'`');
+  flatten(data).forEach(function (val) {
     test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
-      t.same(result.length, 1, 'should one errors');
+      t.same(result.length, 1, 'should have one error');
       t.same(result[0].field, field, 'should be `'+field+'` error');
       t.end();
     });
   });
 }
 function testValid(options, field) {
-  flatten(options.data.valid[field]).forEach(function (val) {
+  const data = options.data.valid[field];
+  if (!data)
+    throw new Error('need to set up test data for valid `'+field+'`');
+  flatten(data).forEach(function (val) {
     test('0.5.0 badges: valid '+field+' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
       const result = validator.structure(badge);
       console.dir(result);
-      t.same(result.length, 0, 'should no errors');
+      t.same(result.length, 0, 'should have no errors');
       t.end();
     });
   });
@@ -248,7 +321,7 @@ function testOptional(options, field) {
     const replacement = {}; replacement[field] = null;
     const badge = options.generator(replacement);
     const result = validator.structure(badge);
-    t.same(result.length, 0, 'should no errors');
+    t.same(result.length, 0, 'should have no errors');
     t.end();
   });
 }
@@ -336,6 +409,23 @@ test('1.0.0-assertion: some errors', function (t) {
   const object = testObjectField.bind(null, options);
 
   required('uid');
+  object('recipient');
+
+  required('recipient.identity');
+  required('recipient.type');
+  required('recipient.hashed');
+  optional('recipient.salt');
+
+  // #TODO: write interdependence tests: when recipient.hashed is `true`,
+  // identity should be a hash. When recipient.hashed is `false`, should
+  // match the format of `recipient.type`.
+
+  object('verify');
+  required('verify.type');
+  required('verify.url');
+
+  required('badge');
+  required('issuedOn');
 
   t.end();
 });
