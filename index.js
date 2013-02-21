@@ -151,6 +151,11 @@ function validateNewStructure(assertion) {
     field: 'expires',
     msg: 'must be a unix timestamp or ISO8601 date string'
   });
+
+  testOptional(assertion.evidence, isFormat(re.absoluteUrl), {
+    field: 'evidence',
+    msg: 'must be an absolute url'
+  });
   return errs;
 }
 

@@ -151,6 +151,17 @@ const ABSOLUTE_URLS = {
     'gopher://for-real?',
   ]
 };
+const IMAGE_DATA_URLS = {
+  good: [
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==',
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg\nAAAAUAAAAFCAY\nAAACNbyblA\nAAAHElEQVQ\nI12P4//8/w38GIAXD\nIBKE0DHxgljNBAA\nO9TXL0Y4OHwAAAABJ\nRU5Er\nk\nJ\ng\ng\ng\n==',
+  ],
+  bad: [
+    'data:text/html,<h1>hey</h1>',
+    'data:image/png,<this would be some binary data>',
+    'not a data url',
+  ],
+}
 const TEST_DATA = {
   '0.5.0': {
     valid: {
@@ -204,6 +215,7 @@ const TEST_DATA = {
       'badge': [ABSOLUTE_URLS.good],
       'issuedOn': [TIMES.good, ISO8601.good],
       'expires': [TIMES.good, ISO8601.good],
+      'evidence': [ABSOLUTE_URLS.good],
     },
     invalid: {
       'uid': [STRINGS.bad],
@@ -216,8 +228,9 @@ const TEST_DATA = {
       'verify.type': [STRINGS.bad, VERIFY_TYPES.bad],
       'verify.url': [STRINGS.bad, ABSOLUTE_URLS.bad],
       'badge': [ABSOLUTE_URLS.bad],
-      'issuedOn': [TIMES.bad, ISO8601.bad],
-      'expires': [TIMES.bad, ISO8601.bad],
+      'issuedOn': [STRINGS.bad, TIMES.bad, ISO8601.bad],
+      'expires': [STRINGS.bad, TIMES.bad, ISO8601.bad],
+      'evidence': [STRINGS.bad, ABSOLUTE_URLS.bad],
     }
   }
 };
@@ -429,6 +442,7 @@ test('1.0.0-assertion: some errors', function (t) {
   required('badge');
   required('issuedOn');
   optional('expires');
+  optional('evidence');
 
   t.end();
 });
