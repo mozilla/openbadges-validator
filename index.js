@@ -146,6 +146,11 @@ function validateNewStructure(assertion) {
     field: 'issuedOn',
     msg: 'must be a unix timestamp or ISO8601 date string'
   });
+
+  testOptional(assertion.expires, isUnixOrISOTime, {
+    field: 'expires',
+    msg: 'must be a unix timestamp or ISO8601 date string'
+  });
   return errs;
 }
 

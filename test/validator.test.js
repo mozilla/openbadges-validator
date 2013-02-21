@@ -154,12 +154,12 @@ const ABSOLUTE_URLS = {
 const TEST_DATA = {
   '0.5.0': {
     valid: {
-      recipient: [EMAILS.good, HASHES.good],
-      salt: [STRINGS.good],
-      evidence: [URLS.good],
-      expires: [TIMES.good],
-      issued_on: [TIMES.good],
-      badge: [OBJECTS.good],
+      'recipient': [EMAILS.good, HASHES.good],
+      'salt': [STRINGS.good],
+      'evidence': [URLS.good],
+      'expires': [TIMES.good],
+      'issued_on': [TIMES.good],
+      'badge': [OBJECTS.good],
       'badge.version': [VERSIONS.good],
       'badge.name': [STRINGS.good],
       'badge.description': [STRINGS.good],
@@ -172,12 +172,12 @@ const TEST_DATA = {
       'badge.issuer.org': [STRINGS.good],
     },
     invalid: {
-      recipient: [STRINGS.bad, EMAILS.bad, HASHES.bad],
-      salt: [STRINGS.bad],
-      evidence: [STRINGS.bad, URLS.bad],
-      expires: [STRINGS.bad, TIMES.bad],
-      issued_on: [STRINGS.bad, TIMES.bad],
-      badge: [OBJECTS.bad],
+      'recipient': [STRINGS.bad, EMAILS.bad, HASHES.bad],
+      'salt': [STRINGS.bad],
+      'evidence': [STRINGS.bad, URLS.bad],
+      'expires': [STRINGS.bad, TIMES.bad],
+      'issued_on': [STRINGS.bad, TIMES.bad],
+      'badge': [OBJECTS.bad],
       'badge.version': [STRINGS.bad, VERSIONS.bad],
       'badge.name': [STRINGS.bad],
       'badge.description': [STRINGS.bad],
@@ -192,30 +192,32 @@ const TEST_DATA = {
   },
   '1.0.0-assertion': {
     valid: {
-      uid: [STRINGS.good],
-      recipient: [OBJECTS.good],
+      'uid': [STRINGS.good],
+      'recipient': [OBJECTS.good],
       'recipient.type': [IDENTITY_TYPES.good],
       'recipient.hashed': [BOOLEANS.good],
       'recipient.salt': [STRINGS.good],
       'recipient.identity': [STRINGS.good],
-      verify: [OBJECTS.good],
+      'verify': [OBJECTS.good],
       'verify.type': [VERIFY_TYPES.good],
       'verify.url': [ABSOLUTE_URLS.good],
-      badge: [ABSOLUTE_URLS.good],
+      'badge': [ABSOLUTE_URLS.good],
       'issuedOn': [TIMES.good, ISO8601.good],
+      'expires': [TIMES.good, ISO8601.good],
     },
     invalid: {
-      uid: [STRINGS.bad],
-      recipient: [OBJECTS.bad],
+      'uid': [STRINGS.bad],
+      'recipient': [OBJECTS.bad],
       'recipient.type': [STRINGS.bad, IDENTITY_TYPES.bad],
       'recipient.hashed': [STRINGS.bad, BOOLEANS.bad],
       'recipient.salt': [STRINGS.bad],
       'recipient.identity': [STRINGS.bad],
-      verify: [OBJECTS.bad],
+      'verify': [OBJECTS.bad],
       'verify.type': [STRINGS.bad, VERIFY_TYPES.bad],
       'verify.url': [STRINGS.bad, ABSOLUTE_URLS.bad],
-      badge: [ABSOLUTE_URLS.bad],
+      'badge': [ABSOLUTE_URLS.bad],
       'issuedOn': [TIMES.bad, ISO8601.bad],
+      'expires': [TIMES.bad, ISO8601.bad],
     }
   }
 };
@@ -426,6 +428,7 @@ test('1.0.0-assertion: some errors', function (t) {
 
   required('badge');
   required('issuedOn');
+  optional('expires');
 
   t.end();
 });
