@@ -1,3 +1,4 @@
+const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 
 const re = {
@@ -48,6 +49,15 @@ function isUnixOrISOTime(thing) {
   } catch (e) {
     return false;
   }
+}
+
+function isAbsoluteUrlOrDataURI(thing) {
+  if (re.absoluteUrl.test(thing))
+    return true;
+  const image = dataurl.parse(thing);
+  if (image && image.mimetype === 'image/png')
+    return true;
+  return false
 }
 
 function makeOptionalValidator(errors) {
@@ -156,6 +166,12 @@ function validateNewStructure(assertion) {
     field: 'evidence',
     msg: 'must be an absolute url'
   });
+
+  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {
+    field: 'image',
+    msg: 'must be an absolute url or data URL representing a PNG'
+  });
+
   return errs;
 }
 
@@ -245,6 +261,7 @@ function validateOldStructure(assertion) {
     field: 'badge.issuer.org',
     msg: 'must be a string'
   });
+
   return errs;
 };
 

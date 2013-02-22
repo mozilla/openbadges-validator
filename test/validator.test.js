@@ -158,7 +158,7 @@ const IMAGE_DATA_URLS = {
   ],
   bad: [
     'data:text/html,<h1>hey</h1>',
-    'data:image/png,<this would be some binary data>',
+    'data:image/jpeg;base64,<bunch of stuff goes here>',
     'not a data url',
   ],
 }
@@ -216,6 +216,7 @@ const TEST_DATA = {
       'issuedOn': [TIMES.good, ISO8601.good],
       'expires': [TIMES.good, ISO8601.good],
       'evidence': [ABSOLUTE_URLS.good],
+      'image': [ABSOLUTE_URLS.good, IMAGE_DATA_URLS.good],
     },
     invalid: {
       'uid': [STRINGS.bad],
@@ -231,6 +232,7 @@ const TEST_DATA = {
       'issuedOn': [STRINGS.bad, TIMES.bad, ISO8601.bad],
       'expires': [STRINGS.bad, TIMES.bad, ISO8601.bad],
       'evidence': [STRINGS.bad, ABSOLUTE_URLS.bad],
+      'image': [STRINGS.bad, ABSOLUTE_URLS.bad, IMAGE_DATA_URLS.bad],
     }
   }
 };
@@ -443,6 +445,7 @@ test('1.0.0-assertion: some errors', function (t) {
   required('issuedOn');
   optional('expires');
   optional('evidence');
+  optional('image');
 
   t.end();
 });
