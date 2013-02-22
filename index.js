@@ -85,14 +85,14 @@ function makeRequiredValidator(errors) {
   }
 }
 
-function validateStructure(assertion){
+function validateAssertion(assertion){
   const badgeField = assertion.badge;
   if (isObject(badgeField))
-    return validateOldStructure(assertion);
-  return validateNewStructure(assertion);
+    return validateOldAssertion(assertion);
+  return validateNewAssertion(assertion);
 }
 
-function validateNewStructure(assertion) {
+function validateNewAssertion(assertion) {
   const errs = [];
   const recipient = assertion.recipient || {};
   const verify = assertion.verify || {};
@@ -175,7 +175,7 @@ function validateNewStructure(assertion) {
   return errs;
 }
 
-function validateOldStructure(assertion) {
+function validateOldAssertion(assertion) {
   const errs = [];
   const badge = assertion.badge || {};
   const issuer = badge.issuer || {};
@@ -265,5 +265,4 @@ function validateOldStructure(assertion) {
   return errs;
 };
 
-
-exports.structure = validateStructure;
+exports.assertion = validateAssertion;

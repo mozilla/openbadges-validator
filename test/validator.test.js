@@ -1,18 +1,18 @@
 const test = require('tap').test;
 const validator = require('..');
 const testData = require('./test-data.js');
-const badgeGenerators = require('./test-generators.js');
+const generators = require('./test-generators.js');
 
 test('0.5.0 badges: no errors', function (t) {
-  const badge = badgeGenerators['0.5.0']();
-  const result = validator.structure(badge);
+  const assertion = generators['0.5.0']();
+  const result = validator.assertion(assertion);
   t.same(result.length, 0, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-assertion: no errors', function (t) {
-  const badge = badgeGenerators['1.0.0-assertion']();
-  const result = validator.structure(badge);
+  const assertion = generators['1.0.0-assertion']();
+  const result = validator.assertion(assertion);
   t.same(result.length, 0, 'should have zero errors');
   t.end();
 });
@@ -20,9 +20,9 @@ test('1.0.0-assertion: no errors', function (t) {
 test('0.5.0 badges with errors', function (t) {
   const version = '0.5.0';
   const options = {
-    generator: badgeGenerators[version],
+    generator: generators[version],
     data: testData[version],
-    method: validator.structure
+    method: validator.assertion
   };
   with (macros(options)) {
     optional('salt');
@@ -50,9 +50,9 @@ test('0.5.0 badges with errors', function (t) {
 test('1.0.0-assertion: some errors', function (t) {
   const version = '1.0.0-assertion';
   const options = {
-    generator: badgeGenerators[version],
+    generator: generators[version],
     data: testData[version],
-    method: validator.structure
+    method: validator.assertion
   };
   with (macros(options)) {
     required('uid');
