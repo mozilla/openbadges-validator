@@ -63,7 +63,7 @@ module.exports = {
         'badge',
         'stuff'
       ]
-    });
+    }, replacements);
   }
 };
 

@@ -175,6 +175,19 @@ function validateNewAssertion(assertion) {
   return errs;
 }
 
+function validateBadgeClass(badge) {
+  const errs = [];
+  const testOptional = makeOptionalValidator(errs);
+  const testRequired = makeRequiredValidator(errs);
+
+  testRequired(badge.name, isString, {
+    field: 'name',
+    msg: 'must be a string'
+  });
+
+  return errs;
+}
+
 function validateOldAssertion(assertion) {
   const errs = [];
   const badge = assertion.badge || {};
@@ -266,3 +279,4 @@ function validateOldAssertion(assertion) {
 };
 
 exports.assertion = validateAssertion;
+exports.badgeClass = validateBadgeClass;
