@@ -164,5 +164,41 @@
       "data:image/jpeg;base64,<bunch of stuff goes here>",
       "not a data url"
     ]
+  },
+  "TAGLIST": {
+    "good": [
+      ["these", "are", "strings"]
+    ],
+    "bad": [
+      ["some", "strings", false, {"objects": "nope"}]
+    ]
+  },
+  "ALIGNMENTS": {
+    "good": [
+      [ {"name": "Standard", "url": "https://standard.example.org", "description": "some description"},
+        {"name": "Standard Two", "url": "https://standard.example.org/one"},
+        {"name": "Standard Two", "url": "https://standard.example.org/one", "extra": "whatever"}
+      ]
+    ],
+    "bad": [
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"name": "Standard", "description": "Missing URL"}
+      ],
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"description": "Missing Name", "url": "https://standard.example.org/"}
+      ],
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"description": "Bad URL", "url": "/lol"}
+      ],
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"description": "Bad URL", "url": {"object":"bad"}}
+      ],
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"description": "Bad Name", "name": {"object":"bad"}}
+      ],
+      [ {"name": "Standard", "url": "https://standard.example.org/"},
+        {"description": {"object":"bad"}, "name": "Standard", "url": "https://standard.example.org/"}
+      ]
+    ]
   }
 }

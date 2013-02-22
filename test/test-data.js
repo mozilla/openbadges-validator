@@ -71,6 +71,26 @@ with (require('./test-data.json')) {
         'evidence': [STRINGS.bad, ABSOLUTE_URLS.bad],
         'image': [STRINGS.bad, ABSOLUTE_URLS.bad, IMAGE_DATA_URLS.bad],
       }
-    }
+    },
+    '1.0.0-badge': {
+      valid: {
+        name: [STRINGS.good],
+        description: [STRINGS.good],
+        image: [ABSOLUTE_URLS.good, IMAGE_DATA_URLS.good],
+        criteria: [ABSOLUTE_URLS.good],
+        issuer: [ABSOLUTE_URLS.good],
+        alignment: [ALIGNMENTS.good],
+        tags: [TAGLIST.good],
+      },
+      invalid: {
+        name: [STRINGS.bad],
+        description: [STRINGS.bad],
+        image: [STRINGS.bad, ABSOLUTE_URLS.bad, IMAGE_DATA_URLS.bad],
+        criteria: [STRINGS.bad, ABSOLUTE_URLS.good],
+        issuer: [STRINGS.bad, ABSOLUTE_URLS.good],
+        alignment: [ALIGNMENTS.bad],
+        tags: [TAGLIST.bad],
+      }
+    },
   };
 }

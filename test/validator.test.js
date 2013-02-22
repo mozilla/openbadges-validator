@@ -23,7 +23,7 @@ test('0.5.0 badges with errors', function (t) {
     generator: badgeGenerators[version],
     data: testData[version],
     method: validator.structure
-  }
+  };
   with (macros(options)) {
     optional('salt');
     optional('evidence');
@@ -53,7 +53,7 @@ test('1.0.0-assertion: some errors', function (t) {
     generator: badgeGenerators[version],
     data: testData[version],
     method: validator.structure
-  }
+  };
   with (macros(options)) {
     required('uid');
     object('recipient');
