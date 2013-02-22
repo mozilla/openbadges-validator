@@ -1,0 +1,168 @@
+{
+  "STRINGS" : {
+    "good": ["OH", "hey"],
+    "bad": [
+      ["not", "a", "string"],
+      { "not": "a string" }
+    ]
+  },
+  
+  "EMAILS": {
+    "good": [
+      "brian@awesome.com",
+      "yo+wut@example.com",
+      "ümlaut@heavymetal.de"
+    ],
+    "bad": [
+      "lkajd",
+      "skj@asdk",
+      "@.com",
+      "909090",
+      "____!@"
+    ]
+  },
+  
+  "HASHES": {
+    "good": [
+      "sha1$c0b19425e0f2c8021ab06c79b19144e127b0f2cb",
+      "sha256$406f04039d10c79c070b26781e8246dc01ed1d0453c5ad0fa705ff7d507fd898"
+    ],
+    "bad": [
+      "sha1stuff",
+      "bcrypt$5$something"
+    ]
+  },
+  
+  "URLS": {
+    "good": [
+      "http://example.com/",
+      "https://example.com/w/yo",
+      "/partial/path",
+      "/rad.awesome/great/",
+      "/foreign/crázy/ååú´¨la/"
+    ],
+    "bad": [
+      "-not-asdo",
+      "ftp://bad-scheme",
+      "@.com:90/",
+      "just totally wrong"
+    ]
+  },
+  
+  "TIMES": {
+    "good": [
+      1361561067,
+      "2012-01-01"
+    ],
+    "bad": [
+      "oiajsd09gjas;oj09",
+      "foreever ago",
+      "@.com:90/",
+      "2001-10-190-19",
+      "901d1",
+      "000000000000000000000"
+    ]
+  },
+  
+  "ISO8601": {
+    "good": [
+      "2013-02",
+      "2013-02-21",
+      "2013-02-21T15:18Z",
+      "2013-02-21T15:18-0500",
+      "2013-02-21T15:18.000-0500",
+      "201302",
+      "20130221",
+      "20130221T1518Z",
+      "20130221T1518-0500",
+      "20130221T1518.000-0500"
+    ],
+    "bad": [
+      "20",
+      "2013022",
+      "January 12th",
+      "08/13/1985",
+      "1361561085305"
+    ]
+  },
+
+  "OBJECTS": {
+    "good": [
+      { "something": "yes" },
+      { "other": { "thing": "no" }}
+    ],
+    "bad": [
+      [ 1, 2, 3, 4 ],
+      "just a string"
+    ]
+  },
+
+  "VERSIONS": {
+    "good": [
+      "0.1.1",
+      "2.0.1",
+      "1.2.3",
+      "v1.2.1"
+    ],
+    "bad": [
+      "v100",
+      "50",
+      "v10.1alpha",
+      "1.2.x"
+    ]
+  },
+  "IDENTITY_TYPES": {
+    "good": ["email", "EMAIL", "eMaIl"],
+    "bad": ["anything else", "facebook", "twitter"]
+  },
+  "VERIFY_TYPES": {
+    "good": ["hosted", "HOstED", "signed", "SIgnED"],
+    "bad": ["implicit", "word of mouth"]
+  },
+  "ORIGINS": {
+    "good": [
+      "http://example.com",
+      "https://example.com:80",
+      "https://www.example.com",
+      "https://www.example.com:8080",
+      "http://example.com/"
+    ],
+    "bad": [
+      "-not-asdo",
+      "ftp://bad-scheme",
+      "@.com:90/",
+      "just totally wrong",
+      "http://example.com/what",
+      "http://example.com:8080/false"
+    ]
+  },
+  "BOOLEANS": {
+    "good": [true, "true", "TrUE", false, "false", "FalSE"],
+    "bad": ["not stuff", "bad", "definitely not a boolean"]
+  },
+  "ABSOLUTE_URLS": {
+    "good": [
+      "https://example.org",
+      "http://example.co.uk/awesome",
+      "http://localhost:8080/rad?query=grand",
+      "https://example.org:443/this-is_/athing.json"
+    ],
+    "bad": [
+      "/not-absolute",
+      "not even relative",
+      "ftp://example.org/wrong/scheme",
+      "gopher://for-real?"
+    ]
+  },
+  "IMAGE_DATA_URLS": {
+    "good": [
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg\nAAAAUAAAAFCAY\nAAACNbyblA\nAAAHElEQVQ\nI12P4//8/w38GIAXD\nIBKE0DHxgljNBAA\nO9TXL0Y4OHwAAAABJ\nRU5Er\nk\nJ\ng\ng\ng\n=="
+    ],
+    "bad": [
+      "data:text/html,<h1>hey</h1>",
+      "data:image/jpeg;base64,<bunch of stuff goes here>",
+      "not a data url"
+    ]
+  }
+}
