@@ -14,6 +14,10 @@ const re = {
   unixtime: /^1\d{9}$/,
 }
 
+function pass() {
+  return true;
+}
+
 function isObject(thing) {
   return (
     thing
@@ -24,6 +28,15 @@ function isObject(thing) {
 
 function isString(thing) {
   return typeof thing === 'string'
+}
+
+function isArray(validator) {
+  validator = validator || pass;
+  return function (thing) {
+    if (!Array.isArray(thing))
+      return false;
+    return thing.every(validator);
+  }
 }
 
 function isFormat(format) {
@@ -58,6 +71,18 @@ function isAbsoluteUrlOrDataURI(thing) {
   if (image && image.mimetype === 'image/png')
     return true;
   return false
+}
+
+function isValidAlignmentStructure(thing) {
+  if (!isObject(thing))
+    return false;
+  if (!isString(thing.name))
+    return false;
+  if (thing.description && !isString(thing.description))
+    return false;
+  if (!re.absoluteUrl.test(thing.url))
+    return false;
+  return true;
 }
 
 function makeOptionalValidator(errors) {
@@ -183,6 +208,36 @@ function validateBadgeClass(badge) {
   testRequired(badge.name, isString, {
     field: 'name',
     msg: 'must be a string'
+  });
+
+  testRequired(badge.description, isString, {
+    field: 'description',
+    msg: 'must be a string'
+  });
+
+  testRequired(badge.image, isAbsoluteUrlOrDataURI, {
+    field: 'image',
+    msg: 'must be an absolute url or data URL representing a PNG'
+  });
+
+  testRequired(badge.criteria, isFormat(re.absoluteUrl), {
+    field: 'criteria',
+    msg: 'must be an absolute url'
+  });
+
+  testRequired(badge.issuer, isFormat(re.absoluteUrl), {
+    field: 'issuer',
+    msg: 'must be an absolute url'
+  });
+
+  testOptional(badge.tags, isArray(isString), {
+    field: 'tags',
+    msg: 'must be an array of strings'
+  });
+
+  testOptional(badge.alignment, isArray(isValidAlignmentStructure), {
+    field: 'alignment',
+    msg: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
   });
 
   return errs;

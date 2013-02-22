@@ -96,6 +96,12 @@ test('1.0.0-badge: some errors', function (t) {
   };
   with (macros(options)) {
     required('name');
+    required('description');
+    required('image');
+    required('criteria');
+    required('issuer');
+    optional('tags');
+    optional('alignment');
   }
   t.end();
 });

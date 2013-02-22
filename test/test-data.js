@@ -86,8 +86,8 @@ with (require('./test-data.json')) {
         name: [STRINGS.bad],
         description: [STRINGS.bad],
         image: [STRINGS.bad, ABSOLUTE_URLS.bad, IMAGE_DATA_URLS.bad],
-        criteria: [STRINGS.bad, ABSOLUTE_URLS.good],
-        issuer: [STRINGS.bad, ABSOLUTE_URLS.good],
+        criteria: [STRINGS.bad, ABSOLUTE_URLS.bad],
+        issuer: [STRINGS.bad, ABSOLUTE_URLS.bad],
         alignment: [ALIGNMENTS.bad],
         tags: [TAGLIST.bad],
       }
