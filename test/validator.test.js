@@ -113,6 +113,23 @@ test('1.0.0-badge: some errors', function (t) {
   t.end();
 });
 
+test('1.0.0-issuer: some errors', function (t) {
+  const version = '1.0.0-issuer';
+  const options = {
+    generator: generators[version],
+    data: testData[version],
+    method: validator.issuerOrganization
+  };
+  with (macros(options)) {
+    required('name');
+    required('url');
+    optional('description');
+    optional('image');
+    optional('revocationList');
+  }
+  t.end();
+});
+
 
 /** Test macros
  *
