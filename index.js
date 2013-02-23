@@ -14,76 +14,109 @@ const re = {
   unixtime: /^1\d{9}$/,
 }
 
+function makeValidator(opts) {
+  opts.fn.msg = opts.msg;
+  return opts.fn;
+}
+
 function pass() {
   return true;
 }
 
-function isObject(thing) {
-  return (
-    thing
-    && typeof thing === 'object'
-    && !Array.isArray(thing)
-  )
+function regexToValidator(format, msg) {
+  return makeValidator({
+    msg: msg,
+    fn: function (thing) {
+      return format.test(thing);
+    }
+  });
 }
 
-function isString(thing) {
-  return typeof thing === 'string'
-}
-
-function isArray(validator) {
-  validator = validator || pass;
-  return function (thing) {
-    if (!Array.isArray(thing))
+const isUrl = regexToValidator(re.url, 'must be a URL');
+const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
+const isEmail = regexToValidator(re.email, 'must be an email address');
+const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, hostname and optional port)');
+const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
+const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
+const isEmailOrHash = regexToValidator(re.emailOrHash, 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")');
+const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
+const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
+const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
+const isObject = makeValidator({
+  msg: 'must be an object',
+  fn: function isObject(thing) {
+    return (
+      thing
+        && typeof thing === 'object'
+        && !Array.isArray(thing)
+    )
+  }
+});
+const isString = makeValidator({
+  msg: 'must be a string',
+  fn: function isString(thing) {
+    return typeof thing === 'string'
+  }
+});
+const isArray = makeValidator({
+  msg: 'must be an array',
+  fn: function isArray(validator) {
+    validator = validator || pass;
+    return function (thing) {
+      if (!Array.isArray(thing))
+        return false;
+      return thing.every(validator);
+    }
+  }
+});
+const isBoolean = makeValidator({
+  msg: 'must be a boolean',
+  fn: function isBoolean(thing) {
+    return (
+      typeof thing === 'boolean'
+        || /false/i.test(thing)
+        || /true/i.test(thing)
+    )
+  }
+});
+const isUnixOrISOTime = makeValidator({
+  msg: 'must be a unix timestamp or ISO8601 date string',
+  fn: function isUnixOrISOTime(thing) {
+    if (re.unixtime.test(thing))
+      return true;
+    try {
+      const type = dateutil.parse(thing).type;
+      return type !== 'unknown_date';
+    } catch (e) {
       return false;
-    return thing.every(validator);
+    }
   }
-}
-
-function isFormat(format) {
-  return function (thing) {
-    return format.test(thing);
+});
+const isAbsoluteUrlOrDataURI = makeValidator({
+  msg: 'must be an absolute URL or a dataURL',
+  fn: function isAbsoluteUrlOrDataURI(thing) {
+    if (isAbsoluteUrl(thing))
+      return true;
+    const image = dataurl.parse(thing);
+    if (image && image.mimetype === 'image/png')
+      return true;
+    return false
   }
-}
-
-function isBoolean(thing) {
-  return (
-    typeof thing === 'boolean'
-    || /false/i.test(thing)
-    || /true/i.test(thing)
-  )
-}
-
-function isUnixOrISOTime(thing) {
-  if (re.unixtime.test(thing))
+});
+const isValidAlignmentStructure = makeValidator({
+  msg: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
+  fn: function isValidAlignmentStructure(thing) {
+    if (!isObject(thing))
+      return false;
+    if (!isString(thing.name))
+      return false;
+    if (thing.description && !isString(thing.description))
+      return false;
+    if (!isAbsoluteUrl(thing.url))
+      return false;
     return true;
-  try {
-    const type = dateutil.parse(thing).type;
-    return type !== 'unknown_date';
-  } catch (e) {
-    return false;
   }
-}
-
-function isAbsoluteUrlOrDataURI(thing) {
-  if (re.absoluteUrl.test(thing))
-    return true;
-  const image = dataurl.parse(thing);
-  if (image && image.mimetype === 'image/png')
-    return true;
-  return false
-}
-
-function isValidAlignmentStructure(thing) {
-  if (!isObject(thing))
-    return false;
-  if (!isString(thing.name))
-    return false;
-  if (thing.description && !isString(thing.description))
-    return false;
-  if (!re.absoluteUrl.test(thing.url))
-    return false;
-  return true;
-}
+});
 
 function makeOptionalValidator(errors) {
   errors = errors || [];
@@ -100,6 +133,7 @@ function makeOptionalValidator(errors) {
 function makeRequiredValidator(errors) {
   errors = errors || [];
   return function required(value, test, errObj) {
+    errObj.msg = errObj.msg || test.msg;
     if (typeof value === 'undefined'
         || value === null
         || !test(value)) {
@@ -128,26 +162,18 @@ function validateNewAssertion(assertion) {
   // actually an object.
   if (testRequired(assertion.recipient, isObject, {
     field: 'recipient',
-    msg: 'must be an object'
   })) {
-    testRequired(recipient.type, isFormat(re.identityType), {
+    testRequired(recipient.type, isIdentityType, {
       field: 'recipient.type',
-      msg: 'must be `email`'
     });
-
     testRequired(recipient.identity, isString, {
       field: 'recipient.identity',
-      msg: 'must be a string'
     });
-
     testRequired(recipient.hashed, isBoolean, {
       field: 'recipient.hashed',
-      msg: 'must be either `true` or `false`'
     });
-
     testOptional(recipient.salt, isString, {
       field: 'recipient.salt',
-      msg: 'must be a string'
     });
   }
 
@@ -155,48 +181,33 @@ function validateNewAssertion(assertion) {
   // actually an object.
   if (testRequired(assertion.verify, isObject, {
     field: 'verify',
-    msg: 'must be an object',
   })) {
-    testRequired(verify.type, isFormat(re.verifyType), {
+    testRequired(verify.type, isVerifyType, {
       field: 'verify.type',
-      msg: 'must be either `\'hosted\'` or `\'signed\'`',
     });
-    testRequired(verify.url, isFormat(re.absoluteUrl), {
+    testRequired(verify.url, isAbsoluteUrl, {
       field: 'verify.url',
-      msg: 'must be an absolute url',
     });
   }
 
   testRequired(assertion.uid, isString, {
     field: 'uid',
-    msg: 'must be a string'
   });
-
-  testRequired(assertion.badge, isFormat(re.absoluteUrl), {
+  testRequired(assertion.badge, isAbsoluteUrl, {
     field: 'badge',
-    msg: 'must be an absolute url'
   });
-
   testRequired(assertion.issuedOn, isUnixOrISOTime, {
     field: 'issuedOn',
-    msg: 'must be a unix timestamp or ISO8601 date string'
   });
-
   testOptional(assertion.expires, isUnixOrISOTime, {
     field: 'expires',
-    msg: 'must be a unix timestamp or ISO8601 date string'
   });
-
-  testOptional(assertion.evidence, isFormat(re.absoluteUrl), {
+  testOptional(assertion.evidence, isAbsoluteUrl, {
     field: 'evidence',
-    msg: 'must be an absolute url'
   });
-
   testOptional(assertion.image, isAbsoluteUrlOrDataURI, {
     field: 'image',
-    msg: 'must be an absolute url or data URL representing a PNG'
   });
-
   return errs;
 }
 
@@ -207,37 +218,24 @@ function validateBadgeClass(badge) {
 
   testRequired(badge.name, isString, {
     field: 'name',
-    msg: 'must be a string'
   });
-
   testRequired(badge.description, isString, {
     field: 'description',
-    msg: 'must be a string'
   });
-
   testRequired(badge.image, isAbsoluteUrlOrDataURI, {
     field: 'image',
-    msg: 'must be an absolute url or data URL representing a PNG'
   });
-
-  testRequired(badge.criteria, isFormat(re.absoluteUrl), {
+  testRequired(badge.criteria, isAbsoluteUrl, {
     field: 'criteria',
-    msg: 'must be an absolute url'
   });
-
-  testRequired(badge.issuer, isFormat(re.absoluteUrl), {
+  testRequired(badge.issuer, isAbsoluteUrl, {
     field: 'issuer',
-    msg: 'must be an absolute url'
   });
-
   testOptional(badge.tags, isArray(isString), {
     field: 'tags',
-    msg: 'must be an array of strings'
   });
-
   testOptional(badge.alignment, isArray(isValidAlignmentStructure), {
     field: 'alignment',
-    msg: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
   });
 
   return errs;
@@ -250,84 +248,57 @@ function validateOldAssertion(assertion) {
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  testRequired(assertion.recipient, isFormat(re.emailOrHash), {
+  testRequired(assertion.recipient, isEmailOrHash, {
     field: 'recipient',
-    msg: 'must be email address or hash'
   });
-
   testOptional(assertion.salt, isString, {
     field: 'salt',
-    msg: 'must be a string'
   });
-
-  testOptional(assertion.evidence, isFormat(re.url), {
+  testOptional(assertion.evidence, isUrl, {
     field: 'evidence',
-    msg: 'must be a URL'
   });
-
-  testOptional(assertion.expires, isFormat(re.date), {
+  testOptional(assertion.expires, isDateString, {
     field: 'expires',
-    msg: 'must be a unix timestamp or ISO 8601 date string'
   });
-
-  testOptional(assertion.issued_on, isFormat(re.date), {
+  testOptional(assertion.issued_on, isDateString, {
     field: 'issued_on',
-    msg: 'must be a unix timestamp or ISO 8601 date string'
   });
 
   if (!testRequired(assertion.badge, isObject, {
     field: 'badge',
-    msg: 'must be an object'
   })) return errs;
 
-  testOptional(badge.version, isFormat(re.version), {
+  testOptional(badge.version, isVersionString, {
     field: 'badge.version',
-    msg: 'must be a string in the format x.y.z'
   });
-
   testRequired(badge.name, isString, {
     field: 'badge.name',
-    msg: 'must be a string'
   });
-
   testRequired(badge.description, isString, {
     field: 'badge.description',
-    msg: 'must be a string'
   });
-
-  testRequired(badge.image, isFormat(re.url), {
+  testRequired(badge.image, isUrl, {
     field: 'badge.image',
-    msg: 'must be a url'
   });
-
-  testRequired(badge.criteria, isFormat(re.url), {
+  testRequired(badge.criteria, isUrl, {
     field: 'badge.criteria',
-    msg: 'must be a url'
   });
 
   if (!testRequired(badge.issuer, isObject, {
     field: 'badge.issuer',
-    msg: 'must be an object'
   })) return errs;
 
   testRequired(issuer.name, isString, {
     field: 'badge.issuer.name',
-    msg: 'must be a string'
   });
-
-  testRequired(issuer.contact, isFormat(re.email), {
+  testRequired(issuer.contact, isEmail, {
     field: 'badge.issuer.contact',
-    msg: 'must be an email address'
   });
-
-  testRequired(issuer.origin, isFormat(re.origin), {
+  testRequired(issuer.origin, isOrigin, {
     field: 'badge.issuer.origin',
-    msg: 'must be an origin'
   });
-
   testOptional(issuer.org, isString, {
     field: 'badge.issuer.org',
-    msg: 'must be a string'
   });
 
   return errs;
