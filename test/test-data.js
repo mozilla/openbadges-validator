@@ -92,5 +92,23 @@ with (require('./test-data.json')) {
         tags: [TAGLIST.bad],
       }
     },
+    '1.0.0-issuer': {
+      valid: {
+        name: [STRINGS.good],
+        url: [ABSOLUTE_URLS.good],
+        description: [STRINGS.good],
+        image: [ABSOLUTE_URLS.good, IMAGE_DATA_URLS.good],
+        email: [EMAILS.good],
+        revocationList: [ABSOLUTE_URLS.good],
+      },
+      invalid: {
+        name: [STRINGS.bad],
+        url: [STRINGS.bad, ABSOLUTE_URLS.bad],
+        description: [STRINGS.bad],
+        image: [STRINGS.bad, ABSOLUTE_URLS.bad, IMAGE_DATA_URLS.bad],
+        email: [STRINGS.bad, EMAILS.bad],
+        revocationList: [STRINGS.bad, ABSOLUTE_URLS.bad],
+      }
+    },
   };
 }

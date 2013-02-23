@@ -64,6 +64,16 @@ module.exports = {
         'stuff'
       ]
     }, replacements);
+  },
+  '1.0.0-issuer': function (replacements) {
+    return replaceAll({
+      name: 'Some Issuer',
+      url: 'https://issuer.example.org',
+      description: 'We issue example badges.',
+      image: 'https://issuer.example.org/image.png',
+      email: 'brian@example.org',
+      revocationList: 'https://issuer.example.org/revocation.json'
+    }, replacements)
   }
 };
 

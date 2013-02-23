@@ -241,6 +241,14 @@ function validateBadgeClass(badge) {
   return errs;
 }
 
+function validateIssuerOrganization(issuer) {
+  const errs = [];
+  const testOptional = makeOptionalValidator(errs);
+  const testRequired = makeRequiredValidator(errs);
+
+  return errs;
+};
+
 function validateOldAssertion(assertion) {
   const errs = [];
   const badge = assertion.badge || {};
@@ -306,3 +314,4 @@ function validateOldAssertion(assertion) {
 
 exports.assertion = validateAssertion;
 exports.badgeClass = validateBadgeClass;
+exports.issuerOrganization = validateIssuerOrganization;

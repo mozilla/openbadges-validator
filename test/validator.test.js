@@ -24,6 +24,13 @@ test('1.0.0-badge: no errors', function (t) {
   t.end();
 });
 
+test('1.0.0-issuer: no errors', function (t) {
+  const issuer = generators['1.0.0-issuer']();
+  const result = validator.issuerOrganization(issuer);
+  t.same(result.length, 0, 'should have zero errors');
+  t.end();
+});
+
 test('0.5.0 badges with errors', function (t) {
   const version = '0.5.0';
   const options = {
