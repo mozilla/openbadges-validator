@@ -32,12 +32,12 @@ module.exports = {
       },
       verify: {
         type: 'hosted',
-        url: 'https://example.org/assertion.json'
+        url: 'https://example.org/assertion'
       },
-      badge: 'https://example.org/badge.json',
+      badge: 'https://example.org/badge',
       issuedOn: '2013-02-18T18:10+0500',
-      image: 'https://example.org/image.png',
-      evidence: 'https://example.org/evidence.html',
+      image: 'https://example.org/user-image',
+      evidence: 'https://example.org/evidence',
       expires: '2014-02-18T18:10+0500',
     }, replacements);
   },
@@ -45,9 +45,9 @@ module.exports = {
     return replaceAll({
       name: 'Some Badge',
       description: 'A short description of the badge',
-      image: 'https://example.org/image.png',
-      criteria: 'https://example.org/criteria.html',
-      issuer: 'https://example.org/issuer.json',
+      image: 'https://example.org/badge-image',
+      criteria: 'https://example.org/criteria',
+      issuer: 'https://example.org/issuer',
       alignment: [
         { name: 'Standard One',
           url: 'https://standards.example.org/1',
@@ -72,7 +72,7 @@ module.exports = {
       description: 'We issue example badges.',
       image: 'https://issuer.example.org/image.png',
       email: 'brian@example.org',
-      revocationList: 'https://issuer.example.org/revocation.json'
+      revocationList: 'https://issuer.example.org/revocation-list'
     }, replacements)
   }
 };

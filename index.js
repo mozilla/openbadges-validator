@@ -154,10 +154,10 @@ function isOldAssertion(assertion) {
 function validateAssertion(assertion){
   if (isOldAssertion(assertion))
     return validateOldAssertion(assertion);
-  return validateNewAssertion(assertion);
+  return validateBadgeAssertion(assertion);
 }
 
-function validateNewAssertion(assertion) {
+function validateBadgeAssertion(assertion) {
   const errs = [];
   const recipient = assertion.recipient || {};
   const verify = assertion.verify || {};
@@ -325,25 +325,75 @@ function ensureHttpOk(errs, opts, callback) {
   });
 }
 
-function validateResponses(assertion, callback) {
+function validateOldAssertionResponses(assertion, callback) {
   const errs = [];
   const httpOk = ensureHttpOk.bind(null, errs);
   assertion = absolutize(assertion);
 
   const criteria = assertion.badge.criteria;
+  const image = assertion.badge.image;
   const evidence = assertion.evidence;
 
   async.map([
     {field: 'criteria', url: criteria},
-    {field: 'evidence', url: evidence}
+    {field: 'evidence', url: evidence},
+    {field: 'image', url: image, type: 'image/png'},
   ], httpOk, function () {
     return callback(errs.length ? errs : null)
-  })
+  });
 }
 
+function validateBadgeAssertionResponses(assertion, callback) {
+  const errs = [];
+  const httpOk = ensureHttpOk.bind(null, errs);
+
+  const verifyUrl = assertion.verify.url;
+  const evidence = assertion.evidence;
+  const image = assertion.image;
+
+  const fields = [
+    {field: 'evidence', url: evidence },
+    {field: 'verify.url',
+     url: verifyUrl,
+     type: (assertion.verify.type ==='hosted' ? 'application/json' : '')
+    },
+  ];
+  if (isAbsoluteUrl(image))
+    fields.push({ field: 'image', url: image, type: 'image/png' });
+  async.map(fields, httpOk, function () {
+    return callback(errs.length ? errs : null);
+  });
+}
+
+function validateAssertionResponses(assertion, callback) {
+  if (isOldAssertion(assertion))
+    return validateOldAssertionResponses(assertion, callback);
+  return validateBadgeAssertionResponses(assertion, callback);
+}
+
+function validateBadgeClassResponses(badge, callback) {
+  const errs = [];
+  const httpOk = ensureHttpOk.bind(null, errs);
+
+  const criteria = badge.criteria;
+  const image = badge.image;
+
+  const fields = [{field: 'criteria', url: criteria }];
+  if (isAbsoluteUrl(image))
+    fields.push({ field: 'image', url: image, type: 'image/png' });
+  async.map(fields, httpOk, function () {
+    return callback(errs.length ? errs : null);
+  });
+
+}
+
+exports.isOldAssertion = isOldAssertion;
 exports.ensureHttpOk = ensureHttpOk;
 exports.absolutize = absolutize;
+
 exports.assertion = validateAssertion;
 exports.badgeClass = validateBadgeClass;
 exports.issuerOrganization = validateIssuerOrganization;
-exports.responses = validateResponses;
+
+exports.assertionResponses = validateAssertionResponses;
+exports.badgeClassResponses = validateBadgeClassResponses;
