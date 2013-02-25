@@ -384,7 +384,120 @@ function validateBadgeClassResponses(badge, callback) {
   async.map(fields, httpOk, function () {
     return callback(errs.length ? errs : null);
   });
+}
 
+function validateIssuerOrganizationResponses(issuer, callback) {
+  const errs = [];
+  const httpOk = ensureHttpOk.bind(null, errs);
+
+  const siteUrl = issuer.url;
+  const image = issuer.image;
+  const revocationList = issuer.revocationList;
+
+  const fields = [
+    {field: 'url', url: siteUrl },
+    {field: 'revocationList', url: revocationList, type: 'application/json'},
+  ];
+  if (isAbsoluteUrl(image))
+    fields.push({ field: 'image', url: image, type: 'image/png' });
+  async.map(fields, httpOk, function () {
+    return callback(errs.length ? errs : null);
+  });
+}
+
+function httpGet(url, type, callback) {
+  request({
+    method: 'get',
+    url: url,
+  }, function (err, response, body) {
+    if (err)
+      return callback({
+        code: 'unreachable',
+        extra: err,
+        url: url,
+      });
+    if (response.statusCode !== 200)
+      return callback({
+        code: 'http-status',
+        extra: response.statusCode,
+        url: url,
+      });
+    if (response.headers['content-type'] !== type)
+      return callback({
+        code: 'content-type',
+        extra: response.headers['content-type'],
+        url: url,
+      });
+    return callback(null, body);
+  });
+}
+
+function getRemoteStructures(assertion, callback) {
+  // #TODO: don't assume new assertion structure?
+  var result = {
+    assertion: assertion,
+    badge: null,
+    issuer: null,
+    revocationList: null
+  };
+  const badgeUrl = assertion.badge;
+  httpGet(badgeUrl, 'application/json', function (err, body) {
+    if (err) {
+      err.field = 'badge';
+      return callback(err, result);
+    }
+    try {
+      const badge = JSON.parse(body);
+    } catch (ex) {
+      return callback({
+        field: 'badge',
+        code: 'parse',
+        extra: ex
+      }, result);
+    }
+    result.badge = badge;
+    const issuerUrl = badge.issuer;
+    httpGet(issuerUrl, 'application/json', function (err, body) {
+      if (err) {
+        err.field = 'issuer';
+        return callback(err, result);
+      }
+      try {
+        const issuer = JSON.parse(body);
+      } catch (ex) {
+        return callback({
+          field: 'issuer',
+          code: 'parse',
+          extra: ex
+        }, result);
+      }
+
+      result.issuer = issuer;
+      const revocationListUrl = issuer.revocationList;
+
+      if (!revocationListUrl)
+        return callback(null, result);
+
+      httpGet(revocationListUrl, 'application/json', function (err, body) {
+        if (err) {
+          err.field = 'revocationList';
+          return callback(err, result);
+        }
+        try {
+          const revocationList = JSON.parse(body);
+        } catch (ex) {
+          return callback({
+            field: 'revocationList',
+            code: 'parse',
+            extra: ex
+          }, result);
+        }
+
+        result.revocationList = revocationList;
+        return callback(null, result);
+      });
+    });
+  });
 }
 
 exports.isOldAssertion = isOldAssertion;
@@ -397,3 +510,6 @@ exports.issuerOrganization = validateIssuerOrganization;
 
 exports.assertionResponses = validateAssertionResponses;
 exports.badgeClassResponses = validateBadgeClassResponses;
+exports.issuerOrganizationResponses = validateIssuerOrganizationResponses;
+
+exports.getRemoteStructures = getRemoteStructures;

@@ -68,11 +68,11 @@ module.exports = {
   '1.0.0-issuer': function (replacements) {
     return replaceAll({
       name: 'Some Issuer',
-      url: 'https://issuer.example.org',
+      url: 'https://example.org',
       description: 'We issue example badges.',
-      image: 'https://issuer.example.org/image.png',
+      image: 'https://example.org/image',
       email: 'brian@example.org',
-      revocationList: 'https://issuer.example.org/revocation-list'
+      revocationList: 'https://example.org/revocation-list'
     }, replacements)
   }
 };

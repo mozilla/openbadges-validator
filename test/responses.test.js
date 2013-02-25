@@ -200,6 +200,127 @@ test('validator.badgeClassResponses: 1.0.0-badge, no errors', function (t) {
   });
 });
 
+test('validator.issuerOrganizationResponses: 1.0.0-issuer, full of errors', function (t) {
+  const badge = generators['1.0.0-issuer']();
+  validator.issuerOrganizationResponses(badge, function (errs) {
+    const expect = ['url', 'image', 'revocationList'].sort();
+    const result = errs.map(pluck('field')).sort();
+    t.same(result, expect, 'should have all the right errors in all the right places');
+    t.end();
+  });
+});
+
+test('validator.issuerOrganizationResponses: 1.0.0-issuer, no image or revocation errors', function (t) {
+  const badge = generators['1.0.0-issuer']({
+    image: null,
+    revocationList: null,
+  });
+  validator.issuerOrganizationResponses(badge, function (errs) {
+    const expect = ['url'].sort();
+    const result = errs.map(pluck('field')).sort();
+    t.same(result, expect, 'should have all the right errors in all the right places');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: `badge` error', function (t) {
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, obj) {
+    t.ok(err, 'should have an error');
+    t.ok(err.field, 'should be for `badge` field');
+    t.ok(err.field, 'should be an `unreachable` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: `badge` content type error', function (t) {
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, 'sup', { 'content-type': 'text/plain' });
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, obj) {
+    t.ok(err, 'should have an error');
+    t.ok(err.field, 'should be for `badge` field');
+    t.ok(err.code, 'should be a `content-type` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: `badge` parse error', function (t) {
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, 'ohlol', { 'content-type': 'application/json' });
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, obj) {
+    t.ok(err, 'should have an error');
+    t.ok(err.field, 'should be for `badge` field');
+    t.ok(err.code, 'should be an `parse` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: `issuer` error', function (t) {
+  const badge = JSON.stringify(generators['1.0.0-badge']());
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, badge, { 'content-type': 'application/json' });
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, obj) {
+    t.ok(err, 'should have an error');
+    t.ok(err.field, 'should be for `issuer` field');
+    t.ok(err.code, 'should be an `unreachable` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: `revocationList` error', function (t) {
+  const badge = JSON.stringify(generators['1.0.0-badge']());
+  const issuer = JSON.stringify(generators['1.0.0-issuer']());
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, badge, { 'content-type': 'application/json' })
+    .get('/issuer').reply(200, issuer, { 'content-type': 'application/json' })
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, obj) {
+    t.ok(err, 'should have an error');
+    t.ok(err.field, 'should be for `revocationList` field');
+    t.ok(err.code, 'should be an `unreachable` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: no revocationList, no error', function (t) {
+  const badge = generators['1.0.0-badge']();
+  const issuer = generators['1.0.0-issuer']({
+    revocationList: null
+  });
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, JSON.stringify(badge), { 'content-type': 'application/json' })
+    .get('/issuer').reply(200, JSON.stringify(issuer), { 'content-type': 'application/json' })
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, result) {
+    t.notOk(err, 'should not have an error');
+    t.same(badge, result.badge, 'should get the badge back');
+    t.same(issuer, result.issuer, 'should get the issuer back');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: with revocationList', function (t) {
+  const badge = generators['1.0.0-badge']();
+  const issuer = generators['1.0.0-issuer']();
+  const revocationList = {
+    "hi": "swiper no swiping"
+  };
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, JSON.stringify(badge), { 'content-type': 'application/json' })
+    .get('/issuer').reply(200, JSON.stringify(issuer), { 'content-type': 'application/json' })
+    .get('/revocation-list').reply(200, JSON.stringify(revocationList), { 'content-type': 'application/json' })
+  const assertion = generators['1.0.0-assertion']();
+  validator.getRemoteStructures(assertion, function (err, result) {
+    t.notOk(err, 'should not have an error');
+    t.same(result.badge, badge, 'should get the badge back');
+    t.same(result.issuer, issuer, 'should get the issuer back');
+    t.same(result.revocationList, revocationList, 'should get the revocation list back');
+    t.end();
+  });
+});
 
 function pluck(field) {
   return function (obj) {
