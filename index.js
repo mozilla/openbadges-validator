@@ -1,19 +1,6 @@
 const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 
-const re = {
-  url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
-  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
-  email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
-  origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
-  version: /^v?\d+\.\d+(\.\d+)?$/,
-  date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
-  emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
-  identityType: /^(email)$/i,
-  verifyType: /^(hosted)|(signed)$/i,
-  unixtime: /^1\d{9}$/,
-}
-
 function makeValidator(opts) {
   opts.fn.msg = opts.msg;
   return opts.fn;
@@ -30,6 +17,19 @@ function regexToValidator(format, msg) {
       return format.test(thing);
     }
   });
+}
+
+const re = {
+  url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
+  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
+  email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
+  origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
+  version: /^v?\d+\.\d+(\.\d+)?$/,
+  date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
+  emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
+  identityType: /^(email)$/i,
+  verifyType: /^(hosted)|(signed)$/i,
+  unixtime: /^1\d{9}$/,
 }
 
 const isUrl = regexToValidator(re.url, 'must be a URL');
@@ -144,9 +144,12 @@ function makeRequiredValidator(errors) {
   }
 }
 
+function isOldAssertion(assertion) {
+  return isObject(assertion.badge);
+}
+
 function validateAssertion(assertion){
-  const badgeField = assertion.badge;
-  if (isObject(badgeField))
+  if (isOldAssertion(assertion))
     return validateOldAssertion(assertion);
   return validateNewAssertion(assertion);
 }
