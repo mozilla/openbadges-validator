@@ -256,6 +256,29 @@ function validateOldAssertion(assertion) {
   return errs;
 };
 
+function absolutize(assertion) {
+  if (!isOldAssertion(assertion))
+    return assertion;
+
+  if (!assertion
+      || !assertion.badge
+      || !assertion.badge.issuer
+      || !assertion.badge.issuer.origin)
+    return false;
+
+  const origin = assertion.badge.issuer.origin;
+  const criteria = assertion.badge.criteria;
+  const image = assertion.badge.image;
+  const evidence = assertion.evidence;
+
+  assertion.badge.criteria = origin + criteria;
+  assertion.badge.image = origin + image;
+  if (evidence)
+    assertion.evidence = origin + evidence;
+  return assertion;
+}
+
+exports.absolutize = absolutize;
 exports.assertion = validateAssertion;
 exports.badgeClass = validateBadgeClass;
 exports.issuerOrganization = validateIssuerOrganization;
