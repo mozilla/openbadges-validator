@@ -3,13 +3,13 @@ module.exports = {
     return replaceAll({
       recipient: sha('brian@mozillafoundation.org', 'seasalt'),
       salt: 'seasalt',
-      evidence: 'https://example.org',
+      evidence: '/evidence',
       expires: '2013-06-06',
       issued_on: '2013-01-01',
       badge: {
         version: '0.5.0',
         criteria: '/criteria',
-        image: '/image.png',
+        image: '/image',
         name: 'Some Awesome Badge',
         description: 'This is a description',
         issuer: {

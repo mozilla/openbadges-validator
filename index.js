@@ -1,8 +1,11 @@
+const util = require('util');
+const async = require('async');
+const request = require('request');
 const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 
 function makeValidator(opts) {
-  opts.fn.msg = opts.msg;
+  opts.fn.message = opts.message;
   return opts.fn;
 }
 
@@ -10,9 +13,9 @@ function pass() {
   return true;
 }
 
-function regexToValidator(format, msg) {
+function regexToValidator(format, message) {
   return makeValidator({
-    msg: msg,
+    message: message,
     fn: function (thing) {
       return format.test(thing);
     }
@@ -43,7 +46,7 @@ const isIdentityType = regexToValidator(re.identityType, 'must be the string "em
 const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
 const isObject = makeValidator({
-  msg: 'must be an object',
+  message: 'must be an object',
   fn: function isObject(thing) {
     return (
       thing
@@ -53,13 +56,13 @@ const isObject = makeValidator({
   }
 });
 const isString = makeValidator({
-  msg: 'must be a string',
+  message: 'must be a string',
   fn: function isString(thing) {
     return typeof thing === 'string'
   }
 });
 const isArray = makeValidator({
-  msg: 'must be an array',
+  message: 'must be an array',
   fn: function isArray(validator) {
     validator = validator || pass;
     return function (thing) {
@@ -70,7 +73,7 @@ const isArray = makeValidator({
   }
 });
 const isBoolean = makeValidator({
-  msg: 'must be a boolean',
+  message: 'must be a boolean',
   fn: function isBoolean(thing) {
     return (
       typeof thing === 'boolean'
@@ -80,7 +83,7 @@ const isBoolean = makeValidator({
   }
 });
 const isUnixOrISOTime = makeValidator({
-  msg: 'must be a unix timestamp or ISO8601 date string',
+  message: 'must be a unix timestamp or ISO8601 date string',
   fn: function isUnixOrISOTime(thing) {
     if (re.unixtime.test(thing))
       return true;
@@ -93,7 +96,7 @@ const isUnixOrISOTime = makeValidator({
   }
 });
 const isAbsoluteUrlOrDataURI = makeValidator({
-  msg: 'must be an absolute URL or a dataURL',
+  message: 'must be an absolute URL or a dataURL',
   fn: function isAbsoluteUrlOrDataURI(thing) {
     if (isAbsoluteUrl(thing))
       return true;
@@ -104,7 +107,7 @@ const isAbsoluteUrlOrDataURI = makeValidator({
   }
 });
 const isValidAlignmentStructure = makeValidator({
-  msg: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
+  message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
   fn: function isValidAlignmentStructure(thing) {
     if (!isObject(thing))
       return false;
@@ -133,7 +136,7 @@ function makeOptionalValidator(errors) {
 function makeRequiredValidator(errors) {
   errors = errors || [];
   return function required(value, test, errObj) {
-    errObj.msg = errObj.msg || test.msg;
+    errObj.message = errObj.message || test.message;
     if (typeof value === 'undefined'
         || value === null
         || !test(value)) {
@@ -198,11 +201,11 @@ function validateBadgeClass(badge) {
   testRequired(badge.issuer, isAbsoluteUrl, {field: 'issuer'});
   testOptional(badge.tags, isArray(isString), {
     field: 'tags',
-    msg: 'must be an array of strings'
+    message: 'must be an array of strings'
   });
   testOptional(badge.alignment, isArray(isValidAlignmentStructure), {
     field: 'alignment',
-    msg: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
+    message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
   });
 
   return errs;
@@ -278,7 +281,69 @@ function absolutize(assertion) {
   return assertion;
 }
 
+function ensureHttpOk(errs, opts, callback) {
+  if (arguments.length == 2)
+    callback = opts, opts = errs, errs = [];
+  const error = {field: opts.field,}
+  if (!opts.url)
+    return callback(null, errs);
+  request({
+    url: opts.url,
+    method: 'get',
+    followAllRedirects: true
+  }, function (ex, response, body) {
+    if (ex) {
+      error.code = 'unreachable';
+      error.message = util.format(
+        'must be reachable (%s)',
+        ex.message
+      );
+      error.debug = ex;
+      errs.push(error);
+      return callback(null, errs)
+    }
+    if (response.statusCode !== 200) {
+      error.code = 'response';
+      error.message = util.format(
+        'must respond with 200 or 3xx to HTTP GET request (got %s)',
+        response.statusCode
+      );
+      errs.push(error);
+      return callback(null, errs);
+    }
+    const contentType = response.headers['content-type'];
+    if (opts.type && contentType !== opts.type) {
+      error.code = 'content-type';
+      error.message = util.format(
+        'must respond with correct content-type (expected "%s", got "%s")',
+        opts.type, contentType
+      );
+      errs.push(error);
+      return callback(null, errs);
+    }
+    return callback(null, errs);
+  });
+}
+
+function validateResponses(assertion, callback) {
+  const errs = [];
+  const httpOk = ensureHttpOk.bind(null, errs);
+  assertion = absolutize(assertion);
+
+  const criteria = assertion.badge.criteria;
+  const evidence = assertion.evidence;
+
+  async.map([
+    {field: 'criteria', url: criteria},
+    {field: 'evidence', url: evidence}
+  ], httpOk, function () {
+    return callback(errs.length ? errs : null)
+  })
+}
+
+exports.ensureHttpOk = ensureHttpOk;
 exports.absolutize = absolutize;
 exports.assertion = validateAssertion;
 exports.badgeClass = validateBadgeClass;
 exports.issuerOrganization = validateIssuerOrganization;
+exports.responses = validateResponses;

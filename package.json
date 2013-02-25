@@ -9,7 +9,9 @@
   "dependencies": {
     "nock": "~0.15.2",
     "dateutil": "~0.1.0",
-    "dataurl": "~0.1.0"
+    "dataurl": "~0.1.0",
+    "request": "~2.14.0",
+    "async": "~0.2.5"
   },
   "devDependencies": {
     "tap": "~0.4.0"
