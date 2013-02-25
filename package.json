@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "nock": "~0.15.2",
-    "dateutil": "~0.1.0"
+    "dateutil": "~0.1.0",
+    "dataurl": "~0.1.0"
   },
   "devDependencies": {
     "tap": "~0.4.0"
