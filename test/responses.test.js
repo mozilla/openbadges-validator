@@ -11,7 +11,7 @@ test('validator.ensureHttpOk: 200 OK', function (t) {
     .get(path)
     .reply(200)
   const opts = { field: 'test', url: ORIGIN + path };
-  validator.ensureHttpOk(opts, function (_, errs) {
+  validator.ensureHttpOk(opts, function (_, __, errs) {
     t.same(errs.length, 0, 'should not have any errors');
     t.end();
   });
@@ -29,7 +29,7 @@ test('validator.ensureHttpOk: 3xx redirects', function (t) {
     .get('/other3')
     .reply(200, 'success')
   const opts = { field: 'test', url: ORIGIN + path };
-  validator.ensureHttpOk(opts, function (_, errs) {
+  validator.ensureHttpOk(opts, function (_, __, errs) {
     t.same(errs.length, 0, 'should not have any errors');
     t.end();
   });
@@ -41,7 +41,7 @@ test('validator.ensureHttpOk: 404 Not Found', function (t) {
     .get(path)
     .reply(404, 'Not Found')
   const opts = { field: 'test', url: ORIGIN + path };
-  validator.ensureHttpOk(opts, function (_, errs) {
+  validator.ensureHttpOk(opts, function (_, __, errs) {
     t.same(errs.length, 1, 'should have an error');
     t.end();
   });
@@ -57,7 +57,7 @@ test('validator.ensureHttpOk: 200 OK, wrong type', function (t) {
     url: ORIGIN + path,
     type: 'image/png'
   };
-  validator.ensureHttpOk(opts, function (_, errs) {
+  validator.ensureHttpOk(opts, function (_, __, errs) {
     t.same(errs.length, 1, 'should have an error');
     t.same(errs[0].code, 'content-type', 'should be a content-type error');
     t.end();
@@ -69,7 +69,7 @@ test('validator.ensureHttpOk: Unreachable', function (t) {
     field: 'test',
     url: 'https://totally-bogus-'+Date.now()+'-ya:18241',
   };
-  validator.ensureHttpOk(opts, function (_, errs) {
+  validator.ensureHttpOk(opts, function (_, __, errs) {
     t.same(errs.length, 1, 'should have an error');
     t.same(errs[0].code, 'unreachable', 'should be a unreachable error');
     t.end();
@@ -305,9 +305,7 @@ test('validator.fetchRemoteStructures: no revocationList, no error', function (t
 test('validator.fetchRemoteStructures: with revocationList', function (t) {
   const badge = generators['1.0.0-badge']();
   const issuer = generators['1.0.0-issuer']();
-  const revocationList = {
-    "hi": "swiper no swiping"
-  };
+  const revocationList = {"hi": "swiper no swiping"};
   const scope = nock(ORIGIN)
     .get('/badge').reply(200, JSON.stringify(badge), { 'content-type': 'application/json' })
     .get('/issuer').reply(200, JSON.stringify(issuer), { 'content-type': 'application/json' })
@@ -318,6 +316,30 @@ test('validator.fetchRemoteStructures: with revocationList', function (t) {
     t.same(result.badge, badge, 'should get the badge back');
     t.same(result.issuer, issuer, 'should get the issuer back');
     t.same(result.revocationList, revocationList, 'should get the revocation list back');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: missing `badge` field', function (t) {
+  const assertion = generators['1.0.0-assertion']({badge: null});
+  validator.getRemoteStructures(assertion, function (err, result) {
+    t.ok(err, 'should have an error');
+    t.same(err.field, 'badge', 'should be for the badge field');
+    t.same(err.code, 'missing', 'should be a `missing` error');
+    t.end();
+  });
+});
+
+test('validator.fetchRemoteStructures: missing `issuer` field', function (t) {
+  const assertion = generators['1.0.0-assertion']();
+  const badge = generators['1.0.0-badge']({issuer: null});
+  const revocationList = {"hi": "swiper no swiping"};
+  const scope = nock(ORIGIN)
+    .get('/badge').reply(200, JSON.stringify(badge), { 'content-type': 'application/json' })
+  validator.getRemoteStructures(assertion, function (err, result) {
+    t.ok(err, 'should have an error');
+    t.same(err.field, 'issuer', 'should be for the issuer field');
+    t.same(err.code, 'missing', 'should be a `missing` error');
     t.end();
   });
 });

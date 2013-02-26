@@ -1,3 +1,4 @@
+const jws = require('jws');
 const util = require('util');
 const async = require('async');
 const request = require('request');
@@ -286,7 +287,7 @@ function ensureHttpOk(errs, opts, callback) {
     callback = opts, opts = errs, errs = [];
   const error = {field: opts.field,}
   if (!opts.url)
-    return callback(null, errs);
+    return callback(null, null, errs);
   request({
     url: opts.url,
     method: 'get',
@@ -300,7 +301,7 @@ function ensureHttpOk(errs, opts, callback) {
       );
       error.debug = ex;
       errs.push(error);
-      return callback(null, errs)
+      return callback(null, body, errs)
     }
     if (response.statusCode !== 200) {
       error.code = 'response';
@@ -309,7 +310,7 @@ function ensureHttpOk(errs, opts, callback) {
         response.statusCode
       );
       errs.push(error);
-      return callback(null, errs);
+      return callback(null, body, errs);
     }
     const contentType = response.headers['content-type'];
     if (opts.type && contentType !== opts.type) {
@@ -319,10 +320,16 @@ function ensureHttpOk(errs, opts, callback) {
         opts.type, contentType
       );
       errs.push(error);
-      return callback(null, errs);
+      return callback(null, body, errs);
     }
-    return callback(null, errs);
+    return callback(null, body, errs);
   });
+}
+
+function validateAssertionResponses(assertion, callback) {
+  if (isOldAssertion(assertion))
+    return validateOldAssertionResponses(assertion, callback);
+  return validateBadgeAssertionResponses(assertion, callback);
 }
 
 function validateOldAssertionResponses(assertion, callback) {
@@ -338,8 +345,12 @@ function validateOldAssertionResponses(assertion, callback) {
     {field: 'criteria', url: criteria},
     {field: 'evidence', url: evidence},
     {field: 'image', url: image, type: 'image/png'},
-  ], httpOk, function () {
-    return callback(errs.length ? errs : null)
+  ], httpOk, function (_, bodies) {
+    return callback(errs.length ? errs : null, {
+      criteria: bodies[0],
+      evidence: bodies[1],
+      image: bodies[2],
+    });
   });
 }
 
@@ -360,15 +371,13 @@ function validateBadgeAssertionResponses(assertion, callback) {
   ];
   if (isAbsoluteUrl(image))
     fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function () {
-    return callback(errs.length ? errs : null);
+  async.map(fields, httpOk, function (_, bodies) {
+    return callback(errs.length ? errs : null, {
+      evidence: bodies[0],
+      'verify.url': bodies[1],
+      image: bodies[2],
+    });
   });
-}
-
-function validateAssertionResponses(assertion, callback) {
-  if (isOldAssertion(assertion))
-    return validateOldAssertionResponses(assertion, callback);
-  return validateBadgeAssertionResponses(assertion, callback);
 }
 
 function validateBadgeClassResponses(badge, callback) {
@@ -381,8 +390,11 @@ function validateBadgeClassResponses(badge, callback) {
   const fields = [{field: 'criteria', url: criteria }];
   if (isAbsoluteUrl(image))
     fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function () {
-    return callback(errs.length ? errs : null);
+  async.map(fields, httpOk, function (_, bodies) {
+    return callback(errs.length ? errs : null, {
+      'criteria': bodies[0],
+      image: bodies[1]
+    });
   });
 }
 
@@ -400,12 +412,18 @@ function validateIssuerOrganizationResponses(issuer, callback) {
   ];
   if (isAbsoluteUrl(image))
     fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function () {
-    return callback(errs.length ? errs : null);
+  async.map(fields, httpOk, function (_, bodies) {
+    return callback(errs.length ? errs : null, {
+      url: bodies[0],
+      revocationList: bodies[1],
+      image: bodies[2]
+    });
   });
 }
 
 function httpGet(url, type, callback) {
+  if (arguments.length === 2)
+    callback = type, type = null;
   request({
     method: 'get',
     url: url,
@@ -422,7 +440,7 @@ function httpGet(url, type, callback) {
         extra: response.statusCode,
         url: url,
       });
-    if (response.headers['content-type'] !== type)
+    if (type && response.headers['content-type'] !== type)
       return callback({
         code: 'content-type',
         extra: response.headers['content-type'],
@@ -430,6 +448,11 @@ function httpGet(url, type, callback) {
       });
     return callback(null, body);
   });
+}
+
+function jsonParse(thing) {
+  try {return JSON.parse(thing) }
+  catch (ex) { return false }
 }
 
 function getRemoteStructures(assertion, callback) {
@@ -441,40 +464,49 @@ function getRemoteStructures(assertion, callback) {
     revocationList: null
   };
   const badgeUrl = assertion.badge;
+  if (!badgeUrl)
+    return callback({
+      field: 'badge',
+      code: 'missing'
+    });
+
+  // #TODO: Think of a way to refactor this. The three callback bodies
+  // don't deviate by much – the one major difference is that the
+  // revocationList is optional, so the third `httpGet` might not fire.
   httpGet(badgeUrl, 'application/json', function (err, body) {
     if (err) {
       err.field = 'badge';
       return callback(err, result);
     }
-    try {
-      const badge = JSON.parse(body);
-    } catch (ex) {
+    const badge = jsonParse(body);
+    if (!badge)
       return callback({
         field: 'badge',
         code: 'parse',
-        extra: ex
       }, result);
-    }
+
     result.badge = badge;
     const issuerUrl = badge.issuer;
+    if (!issuerUrl)
+      return callback({
+        field: 'issuer',
+        code: 'missing'
+      });
+
     httpGet(issuerUrl, 'application/json', function (err, body) {
       if (err) {
         err.field = 'issuer';
         return callback(err, result);
       }
-      try {
-        const issuer = JSON.parse(body);
-      } catch (ex) {
+      const issuer = jsonParse(body);
+      if (!issuer)
         return callback({
           field: 'issuer',
           code: 'parse',
-          extra: ex
         }, result);
-      }
 
       result.issuer = issuer;
       const revocationListUrl = issuer.revocationList;
-
       if (!revocationListUrl)
         return callback(null, result);
 
@@ -483,15 +515,13 @@ function getRemoteStructures(assertion, callback) {
           err.field = 'revocationList';
           return callback(err, result);
         }
-        try {
-          const revocationList = JSON.parse(body);
-        } catch (ex) {
+        const revocationList = jsonParse(body);
+        if (!revocationList)
           return callback({
             field: 'revocationList',
             code: 'parse',
             extra: ex
           }, result);
-        }
 
         result.revocationList = revocationList;
         return callback(null, result);
@@ -500,16 +530,70 @@ function getRemoteStructures(assertion, callback) {
   });
 }
 
-exports.isOldAssertion = isOldAssertion;
-exports.ensureHttpOk = ensureHttpOk;
-exports.absolutize = absolutize;
+function validate(input, callback) {
+  const errs = [];
+  if (jws.isValid(input))
+    return fullValidateSignedAssertion(input, callback);
 
-exports.assertion = validateAssertion;
-exports.badgeClass = validateBadgeClass;
-exports.issuerOrganization = validateIssuerOrganization;
+  errs.push({
+    field: '*input*',
+    code: 'invalid'
+  })
+  return callback(errs.length ? errs : null);
+}
 
-exports.assertionResponses = validateAssertionResponses;
-exports.badgeClassResponses = validateBadgeClassResponses;
-exports.issuerOrganizationResponses = validateIssuerOrganizationResponses;
+function fullValidateSignedAssertion(input, callback) {
+  const inputErrs = [];
+  const parts = jws.decode(input);
+  const header = parts.header;
+  const assertion = jsonParse(parts.payload);
+  if (/^hs/i.test(header.alg)) {
+    inputErrs.push({
+      field: '*input*',
+      code: 'jws-algorithm'
+    });
+    return callback(inputErrs);
+  }
+  if (!assertion) {
+    inputErrs.push({
+      field: '*input*',
+      code: 'payload-parse'
+    });
+    return callback(inputErrs);
+  }
 
-exports.getRemoteStructures = getRemoteStructures;
+  const structuralErrs = validateAssertion(assertion);
+  if (structuralErrs.length)
+    return callback(structuralErrs)
+
+  if (assertion.verify.type !== 'signed')
+    return callback([{
+      field: '*input*',
+      code: 'verification-mismatch'
+    }]);
+
+  validate.assertionResponses(assertion, function (responseErrs) {
+    if (responseErrs)
+      return callback(responseErrs);
+    httpGet(assertion.verify.url, function (err, key) {
+      console.dir(err);
+      console.dir(key);
+    });
+  });
+}
+
+module.exports = validate;
+
+validate.isOldAssertion = isOldAssertion;
+validate.ensureHttpOk = ensureHttpOk;
+validate.absolutize = absolutize;
+
+validate.assertion = validateAssertion;
+validate.badgeClass = validateBadgeClass;
+validate.issuerOrganization = validateIssuerOrganization;
+
+validate.assertionResponses = validateAssertionResponses;
+validate.badgeClassResponses = validateBadgeClassResponses;
+validate.issuerOrganizationResponses = validateIssuerOrganizationResponses;
+
+validate.getRemoteStructures = getRemoteStructures;
