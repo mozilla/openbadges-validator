@@ -70,7 +70,7 @@ module.exports = {
       name: 'Some Issuer',
       url: 'https://example.org',
       description: 'We issue example badges.',
-      image: 'https://example.org/image',
+      image: 'https://example.org/issuer-image',
       email: 'brian@example.org',
       revocationList: 'https://example.org/revocation-list'
     }, replacements)

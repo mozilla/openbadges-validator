@@ -152,13 +152,15 @@ function isOldAssertion(assertion) {
   return isObject(assertion.badge);
 }
 
-function validateAssertion(assertion){
+function validateAssertion(assertion, prefix){
   if (isOldAssertion(assertion))
     return validateOldAssertion(assertion);
   return validateBadgeAssertion(assertion);
 }
 
-function validateBadgeAssertion(assertion) {
+function validateBadgeAssertion(assertion, prefix) {
+  function p(str) { return ((prefix&&prefix+':')||'')+str }
+
   const errs = [];
   const recipient = assertion.recipient || {};
   const verify = assertion.verify || {};
@@ -167,95 +169,101 @@ function validateBadgeAssertion(assertion) {
 
   // only test the internals of the `recipient` property if it's
   // actually an object.
-  if (testRequired(assertion.recipient, isObject, {field: 'recipient'})) {
-    testRequired(recipient.type, isIdentityType, {field: 'recipient.type'});
-    testRequired(recipient.identity, isString, {field: 'recipient.identity'});
-    testRequired(recipient.hashed, isBoolean, {field: 'recipient.hashed'});
-    testOptional(recipient.salt, isString, {field: 'recipient.salt'});
+  if (testRequired(assertion.recipient, isObject, {field: p('recipient')})) {
+    testRequired(recipient.type, isIdentityType, {field: p('recipient.type')});
+    testRequired(recipient.identity, isString, {field: p('recipient.identity')});
+    testRequired(recipient.hashed, isBoolean, {field: p('recipient.hashed')});
+    testOptional(recipient.salt, isString, {field: p('recipient.salt')});
   }
 
   // only test the internal properties of the `verify` property if it's
   // actually an object.
-  if (testRequired(assertion.verify, isObject, {field: 'verify'})) {
-    testRequired(verify.type, isVerifyType, {field: 'verify.type'});
-    testRequired(verify.url, isAbsoluteUrl, {field: 'verify.url'});
+  if (testRequired(assertion.verify, isObject, {field: p('verify')})) {
+    testRequired(verify.type, isVerifyType, {field: p('verify.type')});
+    testRequired(verify.url, isAbsoluteUrl, {field: p('verify.url')});
   }
 
-  testRequired(assertion.uid, isString, {field: 'uid'});
-  testRequired(assertion.badge, isAbsoluteUrl, {field: 'badge'});
-  testRequired(assertion.issuedOn, isUnixOrISOTime, {field: 'issuedOn'});
-  testOptional(assertion.expires, isUnixOrISOTime, {field: 'expires'});
-  testOptional(assertion.evidence, isAbsoluteUrl, {field: 'evidence'});
-  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: 'image'});
+  testRequired(assertion.uid, isString, {field: p('uid')});
+  testRequired(assertion.badge, isAbsoluteUrl, {field: p('badge')});
+  testRequired(assertion.issuedOn, isUnixOrISOTime, {field: p('issuedOn')});
+  testOptional(assertion.expires, isUnixOrISOTime, {field: p('expires')});
+  testOptional(assertion.evidence, isAbsoluteUrl, {field: p('evidence')});
+  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: p('image')});
   return errs;
 }
 
-function validateBadgeClass(badge) {
+function validateBadgeClass(badge, prefix) {
+  function p(str) { return ((prefix&&prefix+':')||'')+str }
+
   const errs = [];
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  testRequired(badge.name, isString, {field: 'name'});
-  testRequired(badge.description, isString, {field: 'description'});
-  testRequired(badge.image, isAbsoluteUrlOrDataURI, {field: 'image'});
-  testRequired(badge.criteria, isAbsoluteUrl, {field: 'criteria'});
-  testRequired(badge.issuer, isAbsoluteUrl, {field: 'issuer'});
+  testRequired(badge.name, isString, {field: p('name')});
+  testRequired(badge.description, isString, {field: p('description')});
+  testRequired(badge.image, isAbsoluteUrlOrDataURI, {field: p('image')});
+  testRequired(badge.criteria, isAbsoluteUrl, {field: p('criteria')});
+  testRequired(badge.issuer, isAbsoluteUrl, {field: p('issuer')});
   testOptional(badge.tags, isArray(isString), {
-    field: 'tags',
+    field: p('tags'),
     message: 'must be an array of strings'
   });
   testOptional(badge.alignment, isArray(isValidAlignmentStructure), {
-    field: 'alignment',
+    field: p('alignment'),
     message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
   });
 
   return errs;
 }
 
-function validateIssuerOrganization(issuer) {
+function validateIssuerOrganization(issuer, prefix) {
+  function p(str) { return ((prefix&&prefix+':')||'')+str }
+
   const errs = [];
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  testRequired(issuer.name, isString, {field: 'name'});
-  testRequired(issuer.url, isAbsoluteUrl, {field: 'url'});
-  testOptional(issuer.description, isString, {field: 'description'});
-  testOptional(issuer.image, isAbsoluteUrlOrDataURI, {field: 'image'});
-  testOptional(issuer.email, isEmail, {field: 'email'});
-  testOptional(issuer.revocationList, isAbsoluteUrl, {field: 'revocationList'});
+  testRequired(issuer.name, isString, {field: p('name')});
+  testRequired(issuer.url, isAbsoluteUrl, {field: p('url')});
+  testOptional(issuer.description, isString, {field: p('description')});
+  testOptional(issuer.image, isAbsoluteUrlOrDataURI, {field: p('image')});
+  testOptional(issuer.email, isEmail, {field: p('email')});
+  testOptional(issuer.revocationList, isAbsoluteUrl, {field: p('revocationList')});
 
   return errs;
 };
 
-function validateOldAssertion(assertion) {
+function validateOldAssertion(assertion, prefix) {
+  function p(str) { return ((prefix&&prefix+':')||'')+str }
+
   const errs = [];
   const badge = assertion.badge || {};
   const issuer = badge.issuer || {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  testRequired(assertion.recipient, isEmailOrHash, {field: 'recipient'});
-  testOptional(assertion.salt, isString, {field: 'salt'});
-  testOptional(assertion.evidence, isUrl, {field: 'evidence'});
-  testOptional(assertion.expires, isDateString, {field: 'expires'});
-  testOptional(assertion.issued_on, isDateString, {field: 'issued_on'});
+  testRequired(assertion.recipient, isEmailOrHash, {field: p('recipient')});
+  testOptional(assertion.salt, isString, {field: p('salt')});
+  testOptional(assertion.evidence, isUrl, {field: p('evidence')});
+  testOptional(assertion.expires, isDateString, {field: p('expires')});
+  testOptional(assertion.issued_on, isDateString, {field: p('issued_on')});
 
-  if (!testRequired(assertion.badge, isObject, {field: 'badge'}))
+  if (!testRequired(assertion.badge, isObject, {field: p('badge')}))
     return errs;
 
-  testOptional(badge.version, isVersionString, {field: 'badge.version'});
-  testRequired(badge.name, isString, {field: 'badge.name'});
-  testRequired(badge.description, isString, {field: 'badge.description'});
-  testRequired(badge.image, isUrl, {field: 'badge.image'});
-  testRequired(badge.criteria, isUrl, {field: 'badge.criteria'});
+  testOptional(badge.version, isVersionString, {field: p('badge.version')});
+  testRequired(badge.name, isString, {field: p('badge.name')});
+  testRequired(badge.description, isString, {field: p('badge.description')});
+  testRequired(badge.image, isUrl, {field: p('badge.image')});
+  testRequired(badge.criteria, isUrl, {field: p('badge.criteria')});
 
-  if (!testRequired(badge.issuer, isObject, {field: 'badge.issuer'}))
+  if (!testRequired(badge.issuer, isObject, {field: p('badge.issuer')}))
     return errs;
 
-  testRequired(issuer.name, isString, {field: 'badge.issuer.name'});
-  testRequired(issuer.contact, isEmail, {field: 'badge.issuer.contact'});
-  testRequired(issuer.origin, isOrigin, {field: 'badge.issuer.origin'});
-  testOptional(issuer.org, isString, {field: 'badge.issuer.org'});
+  testRequired(issuer.name, isString, {field: p('badge.issuer.name')});
+  testRequired(issuer.contact, isEmail, {field: p('badge.issuer.contact')});
+  testRequired(issuer.origin, isOrigin, {field: p('badge.issuer.origin')});
+  testOptional(issuer.org, isString, {field: p('badge.issuer.org')});
 
   return errs;
 };
@@ -387,7 +395,9 @@ function validateBadgeClassResponses(badge, callback) {
   const criteria = badge.criteria;
   const image = badge.image;
 
-  const fields = [{field: 'criteria', url: criteria }];
+  const fields = [
+    {field: 'criteria', url: criteria }
+  ];
   if (isAbsoluteUrl(image))
     fields.push({ field: 'image', url: image, type: 'image/png' });
   async.map(fields, httpOk, function (_, bodies) {
@@ -408,15 +418,13 @@ function validateIssuerOrganizationResponses(issuer, callback) {
 
   const fields = [
     {field: 'url', url: siteUrl },
-    {field: 'revocationList', url: revocationList, type: 'application/json'},
   ];
   if (isAbsoluteUrl(image))
     fields.push({ field: 'image', url: image, type: 'image/png' });
   async.map(fields, httpOk, function (_, bodies) {
     return callback(errs.length ? errs : null, {
       url: bodies[0],
-      revocationList: bodies[1],
-      image: bodies[2]
+      image: bodies[1]
     });
   });
 }
@@ -455,7 +463,7 @@ function jsonParse(thing) {
   catch (ex) { return false }
 }
 
-function getRemoteStructures(assertion, callback) {
+function getLinkedStructures(assertion, callback) {
   // #TODO: don't assume new assertion structure?
   var result = {
     assertion: assertion,
@@ -542,11 +550,18 @@ function validate(input, callback) {
   return callback(errs.length ? errs : null);
 }
 
-function fullValidateSignedAssertion(input, callback) {
+function fullValidateSignedAssertion(signature, callback) {
+  var structuralErrs;
   const inputErrs = [];
-  const parts = jws.decode(input);
+  const parts = jws.decode(signature);
   const header = parts.header;
   const assertion = jsonParse(parts.payload);
+
+  // Basic Sanity: We only want to deal with JWS objects that are signed
+  // with a real key. At this point we don't support HMAC signed badges.
+  // We also can't deal with the assertion if we can't parse it from the
+  // payload, so we test for that and bail early if we don't get a
+  // resonable object back.
   if (/^hs/i.test(header.alg)) {
     inputErrs.push({
       field: '*input*',
@@ -562,25 +577,79 @@ function fullValidateSignedAssertion(input, callback) {
     return callback(inputErrs);
   }
 
-  const structuralErrs = validateAssertion(assertion);
+  // Assertion Structure: validate the basic structure of the assertion
+  // and make sure we're dealing with an assertion that self-identifies
+  // as a signed assertion by checking `verify.type`.
+  structuralErrs = validateAssertion(assertion, 'assertion');
   if (structuralErrs.length)
     return callback(structuralErrs)
-
   if (assertion.verify.type !== 'signed')
     return callback([{
       field: '*input*',
       code: 'verification-mismatch'
     }]);
 
-  validate.assertionResponses(assertion, function (responseErrs) {
+
+  validate.assertionResponses(assertion, function (responseErrs, assertionResourceBodies) {
+    // Signature Verification: first make sure we didn't get any
+    // response errors from the remote resources linked from the
+    // assertion. Extract the key from the response of the
+    // `verify.url` resource and do a JWS verification against the
+    // given signature.
     if (responseErrs)
       return callback(responseErrs);
-    httpGet(assertion.verify.url, function (err, key) {
-      console.dir(err);
-      console.dir(key);
+    const publicKey = assertionResourceBodies['verify.url'];
+    const verified = jws.verify(signature, publicKey);
+    if (!verified)
+      return callback([{
+        field: '*input*',
+        code: 'key-mismatch'
+      }]);
+
+    validate.getLinkedStructures(assertion, function (err, structures) {
+      // Ensure badge is not revoked: recursively get all of the
+      // linked structures (BadgeClass, IssuerOrganzation, revocationList).
+      // If a revocationList is found, check the badge's `uid` against
+      // the list to make sure it hasn't been revoked.
+      if (err)
+        return callback([err]);
+      const revocationList = structures.revocationList;
+      if (revocationList && revocationList[assertion.uid])
+        return callback([{
+          field: '*input*',
+          code: 'revoked',
+          extra: revocationList[assertion.uid]
+        }]);
+
+      // Structural Validity, round two: Check the BadgeClass and
+      // IssuerOrganization for structural validity.
+      structuralErrs = [].concat(
+        validate.badgeClass(structures.badge, 'badge'),
+        validate.issuerOrganization(structures.issuer, 'issuer')
+      );
+      if (structuralErrs.length)
+        return callback(structuralErrs)
+
+      const remoteBadge = validateBadgeClassResponses.bind(null, structures.badge);
+      const remoteIssuer = validateIssuerOrganizationResponses.bind(null, structures.issuer);
+
+      async.parallel([remoteBadge, remoteIssuer], function (err, results) {
+        console.dir(err);
+        console.dir(results);
+
+        return callback(null, {
+          version: '1.0.0',
+          resources: {
+            assertion: assertionResourceBodies,
+          },
+          structures: structures,
+        });
+      });
     });
   });
 }
+
+
 
 module.exports = validate;
 
@@ -596,4 +665,4 @@ validate.assertionResponses = validateAssertionResponses;
 validate.badgeClassResponses = validateBadgeClassResponses;
 validate.issuerOrganizationResponses = validateIssuerOrganizationResponses;
 
-validate.getRemoteStructures = getRemoteStructures;
+validate.getLinkedStructures = getLinkedStructures;
