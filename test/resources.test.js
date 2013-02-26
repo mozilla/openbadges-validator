@@ -16,8 +16,8 @@ test('getUrl: required, missing', function (t) {
 
 test('getUrl: required, unreachable', function (t) {
   resources.getUrl({
+    url: ORIGIN + '/test',
     required: true,
-    url: ORIGIN + '/test'
   }, function (ex, result) {
     t.same(result.error.code, 'unreachable', 'should be unreachable');
     t.end();
@@ -28,8 +28,8 @@ test('getUrl: required, HTTP 404', function (t) {
   httpScope
     .get('/test').reply(404)
   resources.getUrl({
+    url: ORIGIN + '/test',
     required: true,
-    url: ORIGIN + '/test'
   }, function (ex, result) {
     t.same(result.error.code, 'http-status', 'should be http response error');
     t.end();
@@ -40,8 +40,8 @@ test('getUrl: required, wrong content type', function (t) {
   httpScope
     .get('/test').reply(200, 'stuff', {'content-type': 'application/msword'})
   resources.getUrl({
-    required: true,
     url: ORIGIN + '/test',
+    required: true,
     'content-type': 'text/plain',
   }, function (ex, result) {
     t.same(result.error.code, 'content-type', 'should be a content-type error');
@@ -64,8 +64,8 @@ test('getUrl: optional, exists', function (t) {
   httpScope
     .get('/test').reply(200, 'stuff', {'content-type': 'text/plain'})
   resources.getUrl({
-    required: false,
     url: ORIGIN + '/test',
+    required: false,
     'content-type': 'text/plain',
   }, function (ex, result) {
     t.notOk(ex, 'no exceptions');
@@ -74,6 +74,36 @@ test('getUrl: optional, exists', function (t) {
     t.end();
   });
 });
+
+test('getUrl: json, unparseable', function (t) {
+  httpScope
+    .get('/test').reply(200, 'stuff', {'content-type': 'application/json'})
+  resources.getUrl({
+    url: ORIGIN + '/test',
+    required: false,
+    json: true,
+  }, function (ex, result) {
+    t.notOk(ex, 'no exceptions');
+    t.same(result.error.code, 'parse', 'parse error')
+    t.end();
+  });
+});
+
+test('getUrl: json, parseable', function (t) {
+  httpScope
+    .get('/test').reply(200, '{"stuff":"all of it"}', {'content-type': 'application/json'})
+  resources.getUrl({
+    url: ORIGIN + '/test',
+    required: false,
+    json: true,
+  }, function (ex, result) {
+    t.notOk(ex, 'no exceptions');
+    t.notOk(result.error, 'no errors')
+    t.same(result.body.stuff, 'all of it');
+    t.end();
+  });
+});
+
 
 
 test('resources', function (t) {

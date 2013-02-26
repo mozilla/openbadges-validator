@@ -4,6 +4,7 @@ const async = require('async');
 const request = require('request');
 const dataurl = require('dataurl');
 const dateutil = require('dateutil');
+const resources = require('./lib/resources');
 
 function makeValidator(opts) {
   opts.fn.message = opts.message;
@@ -290,222 +291,38 @@ function absolutize(assertion) {
   return assertion;
 }
 
-function ensureHttpOk(errs, opts, callback) {
-  if (arguments.length == 2)
-    callback = opts, opts = errs, errs = [];
-  const error = {field: opts.field,}
-  if (!opts.url)
-    return callback(null, null, errs);
-  request({
-    url: opts.url,
-    method: 'get',
-    followAllRedirects: true
-  }, function (ex, response, body) {
-    if (ex) {
-      error.code = 'unreachable';
-      error.message = util.format(
-        'must be reachable (%s)',
-        ex.message
-      );
-      error.debug = ex;
-      errs.push(error);
-      return callback(null, body, errs)
-    }
-    if (response.statusCode !== 200) {
-      error.code = 'response';
-      error.message = util.format(
-        'must respond with 200 or 3xx to HTTP GET request (got %s)',
-        response.statusCode
-      );
-      errs.push(error);
-      return callback(null, body, errs);
-    }
-    const contentType = response.headers['content-type'];
-    if (opts.type && contentType !== opts.type) {
-      error.code = 'content-type';
-      error.message = util.format(
-        'must respond with correct content-type (expected "%s", got "%s")',
-        opts.type, contentType
-      );
-      errs.push(error);
-      return callback(null, body, errs);
-    }
-    return callback(null, body, errs);
-  });
-}
-
-function validateAssertionResponses(assertion, callback) {
-  if (isOldAssertion(assertion))
-    return validateOldAssertionResponses(assertion, callback);
-  return validateBadgeAssertionResponses(assertion, callback);
-}
-
-function validateOldAssertionResponses(assertion, callback) {
-  const errs = [];
-  const httpOk = ensureHttpOk.bind(null, errs);
-  assertion = absolutize(assertion);
-
-  const criteria = assertion.badge.criteria;
-  const image = assertion.badge.image;
-  const evidence = assertion.evidence;
-
-  async.map([
-    {field: 'criteria', url: criteria},
-    {field: 'evidence', url: evidence},
-    {field: 'image', url: image, type: 'image/png'},
-  ], httpOk, function (_, bodies) {
-    return callback(errs.length ? errs : null, {
-      criteria: bodies[0],
-      evidence: bodies[1],
-      image: bodies[2],
-    });
-  });
-}
-
-function validateBadgeAssertionResponses(assertion, callback) {
-  const errs = [];
-  const httpOk = ensureHttpOk.bind(null, errs);
-
-  const verifyUrl = assertion.verify.url;
-  const evidence = assertion.evidence;
-  const image = assertion.image;
-
-  const fields = [
-    {field: 'evidence', url: evidence },
-    {field: 'verify.url',
-     url: verifyUrl,
-     type: (assertion.verify.type ==='hosted' ? 'application/json' : '')
-    },
-  ];
-  if (isAbsoluteUrl(image))
-    fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function (_, bodies) {
-    return callback(errs.length ? errs : null, {
-      evidence: bodies[0],
-      'verify.url': bodies[1],
-      image: bodies[2],
-    });
-  });
-}
-
-function validateBadgeClassResponses(badge, callback) {
-  const errs = [];
-  const httpOk = ensureHttpOk.bind(null, errs);
-
-  const criteria = badge.criteria;
-  const image = badge.image;
-
-  const fields = [
-    {field: 'criteria', url: criteria }
-  ];
-  if (isAbsoluteUrl(image))
-    fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function (_, bodies) {
-    return callback(errs.length ? errs : null, {
-      'criteria': bodies[0],
-      image: bodies[1]
-    });
-  });
-}
-
-function validateIssuerOrganizationResponses(issuer, callback) {
-  const errs = [];
-  const httpOk = ensureHttpOk.bind(null, errs);
-
-  const siteUrl = issuer.url;
-  const image = issuer.image;
-  const revocationList = issuer.revocationList;
-
-  const fields = [
-    {field: 'url', url: siteUrl },
-  ];
-  if (isAbsoluteUrl(image))
-    fields.push({ field: 'image', url: image, type: 'image/png' });
-  async.map(fields, httpOk, function (_, bodies) {
-    return callback(errs.length ? errs : null, {
-      url: bodies[0],
-      image: bodies[1]
-    });
-  });
-}
-
 function jsonParse(thing) {
   try {return JSON.parse(thing) }
   catch (ex) { return false }
 }
 
+// callback has signature
+// `function (err, structures) { }`
 function getLinkedStructures(assertion, callback) {
-  // #TODO: don't assume new assertion structure?
-  var result = {
+  function err(field, error) { error.field = field; return error }
+  function getStructure(url, field, callback) {
+    const options = {url: url, json: true, required: true};
+    resources.getUrl(options, function (ex, result) {
+      if (result.error)
+        return callback(err(field, result.error));
+      structures[field] = result.body;
+      return callback();
+    });
+  }
+  const structures = {
     assertion: assertion,
     badge: null,
     issuer: null,
-    revocationList: null
   };
-  const badgeUrl = assertion.badge;
-  if (!badgeUrl)
-    return callback({
-      field: 'badge',
-      code: 'missing'
-    });
-
-  // #TODO: Think of a way to refactor this. The three callback bodies
-  // don't deviate by much – the one major difference is that the
-  // revocationList is optional, so the third `httpGet` might not fire.
-  httpGet(badgeUrl, 'application/json', function (err, body) {
-    if (err) {
-      err.field = 'badge';
-      return callback(err, result);
+  async.waterfall([
+    function getLinkedBadge(callback) {
+      getStructure(structures.assertion.badge, 'badge', callback);
+    },
+    function getLinkedIssuer(callback) {
+      getStructure(structures.badge.issuer, 'issuer', callback);
     }
-    const badge = jsonParse(body);
-    if (!badge)
-      return callback({
-        field: 'badge',
-        code: 'parse',
-      }, result);
-
-    result.badge = badge;
-    const issuerUrl = badge.issuer;
-    if (!issuerUrl)
-      return callback({
-        field: 'issuer',
-        code: 'missing'
-      });
-
-    httpGet(issuerUrl, 'application/json', function (err, body) {
-      if (err) {
-        err.field = 'issuer';
-        return callback(err, result);
-      }
-      const issuer = jsonParse(body);
-      if (!issuer)
-        return callback({
-          field: 'issuer',
-          code: 'parse',
-        }, result);
-
-      result.issuer = issuer;
-      const revocationListUrl = issuer.revocationList;
-      if (!revocationListUrl)
-        return callback(null, result);
-
-      httpGet(revocationListUrl, 'application/json', function (err, body) {
-        if (err) {
-          err.field = 'revocationList';
-          return callback(err, result);
-        }
-        const revocationList = jsonParse(body);
-        if (!revocationList)
-          return callback({
-            field: 'revocationList',
-            code: 'parse',
-            extra: ex
-          }, result);
-
-        result.revocationList = revocationList;
-        return callback(null, result);
-      });
-    });
+  ], function (err) {
+    return callback(err, structures);
   });
 }
 
@@ -624,15 +441,10 @@ function fullValidateSignedAssertion(signature, callback) {
 module.exports = validate;
 
 validate.isOldAssertion = isOldAssertion;
-validate.ensureHttpOk = ensureHttpOk;
 validate.absolutize = absolutize;
 
 validate.assertion = validateAssertion;
 validate.badgeClass = validateBadgeClass;
 validate.issuerOrganization = validateIssuerOrganization;
-
-validate.assertionResponses = validateAssertionResponses;
-validate.badgeClassResponses = validateBadgeClassResponses;
-validate.issuerOrganizationResponses = validateIssuerOrganizationResponses;
 
 validate.getLinkedStructures = getLinkedStructures;
