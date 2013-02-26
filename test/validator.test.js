@@ -5,29 +5,30 @@ const generators = require('./test-generators.js');
 
 test('0.5.0 badges: no errors', function (t) {
   const assertion = generators['0.5.0']();
-  const result = validator.assertion(assertion);
-  t.same(result.length, 0, 'should have zero errors');
+  const errors = validator.assertion(assertion);
+  console.dir(errors);
+  t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-assertion: no errors', function (t) {
   const assertion = generators['1.0.0-assertion']();
-  const result = validator.assertion(assertion);
-  t.same(result.length, 0, 'should have zero errors');
+  const errors = validator.assertion(assertion);
+  t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-badge: no errors', function (t) {
   const badge = generators['1.0.0-badge']();
-  const result = validator.badgeClass(badge);
-  t.same(result.length, 0, 'should have zero errors');
+  const errors = validator.badgeClass(badge);
+  t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-issuer: no errors', function (t) {
   const issuer = generators['1.0.0-issuer']();
-  const result = validator.issuerOrganization(issuer);
-  t.same(result.length, 0, 'should have zero errors');
+  const errors = validator.issuerOrganization(issuer);
+  t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
@@ -180,10 +181,8 @@ function testInvalid(options, field) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
-      const result = options.method(badge);
-      console.dir(result);
-      t.same(result.length, 1, 'should have one error');
-      t.same(result[0].field, field, 'should be `'+field+'` error');
+      const errors = options.method(badge);
+      t.ok(errors[field], 'should be `'+field+'` error');
       t.end();
     });
   });
@@ -197,9 +196,8 @@ function testValid(options, field) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
-      const result = options.method(badge);
-      console.dir(result);
-      t.same(result.length, 0, 'should have no errors');
+      const errors = options.method(badge);
+      t.notOk(errors, 'should have no errors');
       t.end();
     });
   });
@@ -208,8 +206,8 @@ function testOptional(options, field) {
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {}; replacement[field] = null;
     const badge = options.generator(replacement);
-    const result = options.method(badge);
-    t.same(result.length, 0, 'should have no errors');
+    const errors = options.method(badge);
+    t.notOk(errors, 'should have no errors');
     t.end();
   });
 }
@@ -217,9 +215,8 @@ function testRequired(options, field) {
   test('0.5.0 badges: missing '+field, function (t) {
     const replacement = {}; replacement[field] = null;
     const badge = options.generator(replacement);
-    const result = options.method(badge);
-    t.same(result.length, 1, 'should one errors');
-    t.same(result[0].field, field, 'should be `'+field+'` error');
+    const errors = options.method(badge);
+    t.ok(errors[field], 'should be `'+field+'` error');
     t.end();
   });
 }

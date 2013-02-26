@@ -130,13 +130,14 @@ test('resources', function (t) {
     'c.optional': { required: false },
     'c.image': { required: true },
     'd.does.not.exist': { optional: false }
-  }, function (exception, results) {
-    t.same(results['a.root'].body, 'a.root');
-    t.same(results['a.nested.url'].body, 'a.nested.url');
-    t.same(results['b.image'].error.code, 'content-type');
-    t.same(results['c.optional'].error.code, 'http-status');
-    t.same(results['c.image'].error.code, 'unreachable');
-    t.same(results['d.does.not.exist'].error.code, 'missing');
+  }, function (err, results) {
+    t.same(results['a.root'], 'a.root');
+    t.same(results['a.nested.url'], 'a.nested.url');
+
+    t.same(err['b.image'].code, 'content-type');
+    t.same(err['c.optional'].code, 'http-status');
+    t.same(err['c.image'].code, 'unreachable');
+    t.same(err['d.does.not.exist'].code, 'missing');
     t.end();
   });
 });

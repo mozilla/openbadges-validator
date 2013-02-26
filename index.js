@@ -6,6 +6,12 @@ const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 const resources = require('./lib/resources');
 
+function makeError(code, message) {
+  const err = new Error(message||code);
+  err.code = code;
+  return err;
+}
+
 function makeValidator(opts) {
   opts.fn.message = opts.message;
   return opts.fn;
@@ -13,6 +19,14 @@ function makeValidator(opts) {
 
 function pass() {
   return true;
+}
+
+function hasKeys(obj) {
+  return Object.keys(obj).length > 0
+}
+
+function objectIfKeys(obj) {
+  return hasKeys(obj) ? obj : null;
 }
 
 function regexToValidator(format, message) {
@@ -124,11 +138,14 @@ const isValidAlignmentStructure = makeValidator({
 });
 
 function makeOptionalValidator(errors) {
-  errors = errors || [];
+  errors = errors || {};
   return function optional(value, test, errObj) {
+    const message = errObj.message || test.message;
+    const field = errObj.field;
+    const code = errObj.code || test.code;
     if (!value) return true;
     if (!test(value)) {
-      errors.push(errObj);
+      errors[field] = makeError(code, message);
       return false;
     }
     return true;
@@ -136,13 +153,15 @@ function makeOptionalValidator(errors) {
 }
 
 function makeRequiredValidator(errors) {
-  errors = errors || [];
+  errors = errors || {};
   return function required(value, test, errObj) {
-    errObj.message = errObj.message || test.message;
+    const message = errObj.message || test.message;
+    const field = errObj.field;
+    const code = errObj.code || test.code;
     if (typeof value === 'undefined'
         || value === null
         || !test(value)) {
-      errors.push(errObj);
+      errors[field] = makeError(code, message);
       return false;
     }
     return true;
@@ -162,7 +181,7 @@ function validateAssertion(assertion, prefix){
 function validateBadgeAssertion(assertion, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
-  const errs = [];
+  const errs = {};
   const recipient = assertion.recipient || {};
   const verify = assertion.verify || {};
   const testOptional = makeOptionalValidator(errs);
@@ -190,13 +209,13 @@ function validateBadgeAssertion(assertion, prefix) {
   testOptional(assertion.expires, isUnixOrISOTime, {field: p('expires')});
   testOptional(assertion.evidence, isAbsoluteUrl, {field: p('evidence')});
   testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: p('image')});
-  return errs;
+  return objectIfKeys(errs);
 }
 
 function validateBadgeClass(badge, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
-  const errs = [];
+  const errs = {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
@@ -214,13 +233,13 @@ function validateBadgeClass(badge, prefix) {
     message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)'
   });
 
-  return errs;
+  return objectIfKeys(errs);
 }
 
 function validateIssuerOrganization(issuer, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
-  const errs = [];
+  const errs = {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
@@ -231,13 +250,13 @@ function validateIssuerOrganization(issuer, prefix) {
   testOptional(issuer.email, isEmail, {field: p('email')});
   testOptional(issuer.revocationList, isAbsoluteUrl, {field: p('revocationList')});
 
-  return errs;
+  return objectIfKeys(errs);
 };
 
 function validateOldAssertion(assertion, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
-  const errs = [];
+  const errs = {};
   const badge = assertion.badge || {};
   const issuer = badge.issuer || {};
   const testOptional = makeOptionalValidator(errs);
@@ -250,7 +269,7 @@ function validateOldAssertion(assertion, prefix) {
   testOptional(assertion.issued_on, isDateString, {field: p('issued_on')});
 
   if (!testRequired(assertion.badge, isObject, {field: p('badge')}))
-    return errs;
+    return objectIfKeys(errs);
 
   testOptional(badge.version, isVersionString, {field: p('badge.version')});
   testRequired(badge.name, isString, {field: p('badge.name')});
@@ -259,14 +278,14 @@ function validateOldAssertion(assertion, prefix) {
   testRequired(badge.criteria, isUrl, {field: p('badge.criteria')});
 
   if (!testRequired(badge.issuer, isObject, {field: p('badge.issuer')}))
-    return errs;
+    return objectIfKeys(errs);
 
   testRequired(issuer.name, isString, {field: p('badge.issuer.name')});
   testRequired(issuer.contact, isEmail, {field: p('badge.issuer.contact')});
   testRequired(issuer.origin, isOrigin, {field: p('badge.issuer.origin')});
   testOptional(issuer.org, isString, {field: p('badge.issuer.org')});
 
-  return errs;
+  return objectIfKeys(errs);
 };
 
 function absolutize(assertion) {
@@ -296,8 +315,7 @@ function jsonParse(thing) {
   catch (ex) { return false }
 }
 
-// callback has signature
-// `function (err, structures) { }`
+// callback has signature `function (err, structures) { }`
 function getLinkedStructures(assertion, callback) {
   function err(field, error) { error.field = field; return error }
   function getStructure(url, field, callback) {
@@ -325,119 +343,104 @@ function getLinkedStructures(assertion, callback) {
     return callback(err, structures);
   });
 }
+validate.getLinkedStructures = getLinkedStructures;
+
+// `structures` should be the response from `getLinkedStructures`
+// callback has signature `function (errs, responses)`
+function getLinkedResources(structures, callback) {
+  resources(structures, {
+    'assertion.image': {
+      required: false,
+      'content-type': 'image/png'
+    },
+    'assertion.verify.url': {
+      required: true,
+      json: structures.assertion.verify.type === 'hosted'
+    },
+    'assertion.evidence': { required: false },
+    'badge.criteria': { required: true },
+    'badge.image': {
+      required: true,
+      'content-type': 'image/png'
+    },
+    'issuer.url': { required: true },
+    'issuer.image': { required: false },
+    'issuer.revocationList': { required: true, json: true }
+  }, callback);
+}
+validate.getLinkedResources = getLinkedResources;
+
+function unpackJWS(signature, callback) {
+  const parts = jws.decode(signature);
+  if (!parts)
+    return callback(makeError('jws-decode'));
+  if (/^hs/i.test(parts.header.alg))
+    return callback(makeError('jws-algorithm'));
+  const payload = jsonParse(parts.payload);
+  if (!payload)
+    return callback(makeError('jws-payload-parse'));
+  return callback(null, payload)
+}
+validate.unpackJWS = unpackJWS;
+
 
 function validate(input, callback) {
   const errs = [];
   if (jws.isValid(input))
     return fullValidateSignedAssertion(input, callback);
-
-  errs.push({
-    field: '*input*',
-    code: 'invalid'
-  })
   return callback(errs.length ? errs : null);
 }
 
+// - unpack jws
+// - get linked structures (implicit validation)
+// - validate structures
+// - get linked resources (implicit validation)
+// - verify signature
+// - verify unrevoked
 function fullValidateSignedAssertion(signature, callback) {
-  var structuralErrs;
-  const inputErrs = [];
-  const parts = jws.decode(signature);
-  const header = parts.header;
-  const assertion = jsonParse(parts.payload);
-
-  // Basic Sanity: We only want to deal with JWS objects that are signed
-  // with a real key. At this point we don't support HMAC signed badges.
-  // We also can't deal with the assertion if we can't parse it from the
-  // payload, so we test for that and bail early if we don't get a
-  // resonable object back.
-  if (/^hs/i.test(header.alg)) {
-    inputErrs.push({
-      field: '*input*',
-      code: 'jws-algorithm'
-    });
-    return callback(inputErrs);
-  }
-  if (!assertion) {
-    inputErrs.push({
-      field: '*input*',
-      code: 'payload-parse'
-    });
-    return callback(inputErrs);
-  }
-
-  // Assertion Structure: validate the basic structure of the assertion
-  // and make sure we're dealing with an assertion that self-identifies
-  // as a signed assertion by checking `verify.type`.
-  structuralErrs = validateAssertion(assertion, 'assertion');
-  if (structuralErrs.length)
-    return callback(structuralErrs)
-  if (assertion.verify.type !== 'signed')
-    return callback([{
-      field: '*input*',
-      code: 'verification-mismatch'
-    }]);
-
-
-  validate.assertionResponses(assertion, function (responseErrs, assertionResourceBodies) {
-    // Signature Verification: first make sure we didn't get any
-    // response errors from the remote resources linked from the
-    // assertion. Extract the key from the response of the
-    // `verify.url` resource and do a JWS verification against the
-    // given signature.
-    if (responseErrs)
-      return callback(responseErrs);
-    const publicKey = assertionResourceBodies['verify.url'];
-    const verified = jws.verify(signature, publicKey);
-    if (!verified)
-      return callback([{
-        field: '*input*',
-        code: 'key-mismatch'
-      }]);
-
-    validate.getLinkedStructures(assertion, function (err, structures) {
-      // Ensure badge is not revoked: recursively get all of the
-      // linked structures (BadgeClass, IssuerOrganzation, revocationList).
-      // If a revocationList is found, check the badge's `uid` against
-      // the list to make sure it hasn't been revoked.
-      if (err)
-        return callback([err]);
-      const revocationList = structures.revocationList;
-      if (revocationList && revocationList[assertion.uid])
-        return callback([{
-          field: '*input*',
-          code: 'revoked',
-          extra: revocationList[assertion.uid]
-        }]);
-
-      // Structural Validity, round two: Check the BadgeClass and
-      // IssuerOrganization for structural validity.
-      structuralErrs = [].concat(
-        validate.badgeClass(structures.badge, 'badge'),
-        validate.issuerOrganization(structures.issuer, 'issuer')
-      );
-      if (structuralErrs.length)
-        return callback(structuralErrs)
-
-      const remoteBadge = validateBadgeClassResponses.bind(null, structures.badge);
-      const remoteIssuer = validateIssuerOrganizationResponses.bind(null, structures.issuer);
-
-      async.parallel([remoteBadge, remoteIssuer], function (err, results) {
-        console.dir(err);
-        console.dir(results);
-
-        return callback(null, {
-          version: '1.0.0',
-          resources: {
-            assertion: assertionResourceBodies,
-          },
-          structures: structures,
-        });
-      });
-    });
-  });
+  const data = {signature: signature};
+  async.waterfall([
+    function unpack(callback) {
+      unpackJWS(signature, callback)
+    },
+    function getStructures(assertion, callback) {
+      getLinkedStructures(assertion, callback);
+    },
+    function validateStructures(structures, callback) {
+      const errors = {
+        assertion: validateAssertion(structures.assertion),
+        badge: validateBadgeClass(structures.badge),
+        issuer: validateIssuerOrganization(structures.issuer),
+      }
+      console.dir(errors);
+      callback(null, structures);
+    },
+    function getResources(structures, callback) {
+      data.structures = structures;
+      getLinkedResources(structures, callback);
+    },
+    function verifySignature(resources, callback) {
+      data.resources = resources;
+      const publicKey = resources['assertion.verify.url'];
+      if (!jws.verify(signature, publicKey))
+        return callback(makeError('verify-signature'))
+      callback(null, resources);
+    },
+    function verifyUnrevoked(resources, callback) {
+      const revocationList = resources['issuer.revocationList'];
+      const assertion = data.structures.assertion;
+      var msg;
+      if (!revocationList)
+        return callback();
+      if ((msg = revocationList[assertion.uid]))
+        return callback(makeError('verify-revoked', msg))
+      return callback();
+    }
+  ],function (errs) {
+    console.log('errors', errs);
+    console.log('data', data);
+  })
 }
-
-
 module.exports = validate;
 
 validate.isOldAssertion = isOldAssertion;
@@ -446,5 +449,3 @@ validate.absolutize = absolutize;
 validate.assertion = validateAssertion;
 validate.badgeClass = validateBadgeClass;
 validate.issuerOrganization = validateIssuerOrganization;
-
-validate.getLinkedStructures = getLinkedStructures;

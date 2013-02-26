@@ -36,7 +36,7 @@ module.exports = {
       },
       badge: 'https://example.org/badge',
       issuedOn: '2013-02-18T18:10+0500',
-      image: 'https://example.org/user-image',
+      image: 'https://example.org/assertion-image',
       evidence: 'https://example.org/evidence',
       expires: '2014-02-18T18:10+0500',
     }, replacements);
