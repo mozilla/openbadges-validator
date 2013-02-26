@@ -429,35 +429,6 @@ function validateIssuerOrganizationResponses(issuer, callback) {
   });
 }
 
-function httpGet(url, type, callback) {
-  if (arguments.length === 2)
-    callback = type, type = null;
-  request({
-    method: 'get',
-    url: url,
-  }, function (err, response, body) {
-    if (err)
-      return callback({
-        code: 'unreachable',
-        extra: err,
-        url: url,
-      });
-    if (response.statusCode !== 200)
-      return callback({
-        code: 'http-status',
-        extra: response.statusCode,
-        url: url,
-      });
-    if (type && response.headers['content-type'] !== type)
-      return callback({
-        code: 'content-type',
-        extra: response.headers['content-type'],
-        url: url,
-      });
-    return callback(null, body);
-  });
-}
-
 function jsonParse(thing) {
   try {return JSON.parse(thing) }
   catch (ex) { return false }
@@ -648,7 +619,6 @@ function fullValidateSignedAssertion(signature, callback) {
     });
   });
 }
-
 
 
 module.exports = validate;
