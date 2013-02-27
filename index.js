@@ -6,168 +6,6 @@ const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 const resources = require('./lib/resources');
 
-function makeError(code, message) {
-  const err = new Error(message||code);
-  err.code = code;
-  return err;
-}
-
-function makeValidator(opts) {
-  opts.fn.message = opts.message;
-  return opts.fn;
-}
-
-function pass() {
-  return true;
-}
-
-function hasKeys(obj) {
-  return Object.keys(obj).length > 0
-}
-
-function objectIfKeys(obj) {
-  return hasKeys(obj) ? obj : null;
-}
-
-function regexToValidator(format, message) {
-  return makeValidator({
-    message: message,
-    fn: function (thing) {
-      return format.test(thing);
-    }
-  });
-}
-
-const re = {
-  url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
-  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
-  email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
-  origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
-  version: /^v?\d+\.\d+(\.\d+)?$/,
-  date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
-  emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
-  identityType: /^(email)$/i,
-  verifyType: /^(hosted)|(signed)$/i,
-  unixtime: /^1\d{9}$/,
-}
-
-const isUrl = regexToValidator(re.url, 'must be a URL');
-const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
-const isEmail = regexToValidator(re.email, 'must be an email address');
-const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, hostname and optional port)');
-const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
-const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
-const isEmailOrHash = regexToValidator(re.emailOrHash, 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")');
-const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
-const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
-const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
-const isObject = makeValidator({
-  message: 'must be an object',
-  fn: function isObject(thing) {
-    return (
-      thing
-        && typeof thing === 'object'
-        && !Array.isArray(thing)
-    )
-  }
-});
-const isString = makeValidator({
-  message: 'must be a string',
-  fn: function isString(thing) {
-    return typeof thing === 'string'
-  }
-});
-const isArray = makeValidator({
-  message: 'must be an array',
-  fn: function isArray(validator) {
-    validator = validator || pass;
-    return function (thing) {
-      if (!Array.isArray(thing))
-        return false;
-      return thing.every(validator);
-    }
-  }
-});
-const isBoolean = makeValidator({
-  message: 'must be a boolean',
-  fn: function isBoolean(thing) {
-    return (
-      typeof thing === 'boolean'
-        || /false/i.test(thing)
-        || /true/i.test(thing)
-    )
-  }
-});
-const isUnixOrISOTime = makeValidator({
-  message: 'must be a unix timestamp or ISO8601 date string',
-  fn: function isUnixOrISOTime(thing) {
-    if (re.unixtime.test(thing))
-      return true;
-    try {
-      const type = dateutil.parse(thing).type;
-      return type !== 'unknown_date';
-    } catch (e) {
-      return false;
-    }
-  }
-});
-const isAbsoluteUrlOrDataURI = makeValidator({
-  message: 'must be an absolute URL or a dataURL',
-  fn: function isAbsoluteUrlOrDataURI(thing) {
-    if (isAbsoluteUrl(thing))
-      return true;
-    const image = dataurl.parse(thing);
-    if (image && image.mimetype === 'image/png')
-      return true;
-    return false
-  }
-});
-const isValidAlignmentStructure = makeValidator({
-  message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
-  fn: function isValidAlignmentStructure(thing) {
-    if (!isObject(thing))
-      return false;
-    if (!isString(thing.name))
-      return false;
-    if (thing.description && !isString(thing.description))
-      return false;
-    if (!isAbsoluteUrl(thing.url))
-      return false;
-    return true;
-  }
-});
-
-function makeOptionalValidator(errors) {
-  errors = errors || {};
-  return function optional(value, test, errObj) {
-    const message = errObj.message || test.message;
-    const field = errObj.field;
-    const code = errObj.code || test.code;
-    if (!value) return true;
-    if (!test(value)) {
-      errors[field] = makeError(code, message);
-      return false;
-    }
-    return true;
-  }
-}
-
-function makeRequiredValidator(errors) {
-  errors = errors || {};
-  return function required(value, test, errObj) {
-    const message = errObj.message || test.message;
-    const field = errObj.field;
-    const code = errObj.code || test.code;
-    if (typeof value === 'undefined'
-        || value === null
-        || !test(value)) {
-      errors[field] = makeError(code, message);
-      return false;
-    }
-    return true;
-  }
-}
-
 function isOldAssertion(assertion) {
   return isObject(assertion.badge);
 }
@@ -384,6 +222,14 @@ function unpackJWS(signature, callback) {
 validate.unpackJWS = unpackJWS;
 
 
+function checkRevoked(list, assertion) {
+  var msg;
+  if (!list) return;
+  if ((msg =list[assertion.uid]))
+    return makeError('verify-revoked', msg);
+}
+validate.checkRevoked = checkRevoked;
+
 function validate(input, callback) {
   const errs = [];
   if (jws.isValid(input))
@@ -391,20 +237,14 @@ function validate(input, callback) {
   return callback(errs.length ? errs : null);
 }
 
-// - unpack jws
-// - get linked structures (implicit validation)
-// - validate structures
-// - get linked resources (implicit validation)
-// - verify signature
-// - verify unrevoked
 function fullValidateSignedAssertion(signature, callback) {
   const data = {signature: signature};
   async.waterfall([
     function unpack(callback) {
-      unpackJWS(signature, callback)
+      return unpackJWS(signature, callback)
     },
     function getStructures(assertion, callback) {
-      getLinkedStructures(assertion, callback);
+      return getLinkedStructures(assertion, callback);
     },
     function validateStructures(structures, callback) {
       const errors = {
@@ -412,33 +252,34 @@ function fullValidateSignedAssertion(signature, callback) {
         badge: validateBadgeClass(structures.badge),
         issuer: validateIssuerOrganization(structures.issuer),
       }
-      console.dir(errors);
-      callback(null, structures);
+      if (errors.assertion || errors.badge || errors.issuer) {
+        const error = makeError('structure');
+        error.extra = removeNulls(errors);
+        return callback(error);
+      }
+      return callback(null, structures);
     },
     function getResources(structures, callback) {
       data.structures = structures;
-      getLinkedResources(structures, callback);
+      return getLinkedResources(structures, callback);
     },
     function verifySignature(resources, callback) {
       data.resources = resources;
       const publicKey = resources['assertion.verify.url'];
       if (!jws.verify(signature, publicKey))
         return callback(makeError('verify-signature'))
-      callback(null, resources);
+      return callback(null, resources);
     },
     function verifyUnrevoked(resources, callback) {
       const revocationList = resources['issuer.revocationList'];
       const assertion = data.structures.assertion;
-      var msg;
-      if (!revocationList)
-        return callback();
-      if ((msg = revocationList[assertion.uid]))
-        return callback(makeError('verify-revoked', msg))
+      const error = checkRevoked(revocationList, assertion);
+      if (error)
+        return callback(error);
       return callback();
     }
   ],function (errs) {
-    console.log('errors', errs);
-    console.log('data', data);
+    return callback(errs, data);
   })
 }
 module.exports = validate;
@@ -449,3 +290,175 @@ validate.absolutize = absolutize;
 validate.assertion = validateAssertion;
 validate.badgeClass = validateBadgeClass;
 validate.issuerOrganization = validateIssuerOrganization;
+
+
+function makeError(code, message) {
+  const err = new Error(message||code);
+  err.code = code;
+  return err;
+}
+
+function makeValidator(opts) {
+  opts.fn.message = opts.message;
+  return opts.fn;
+}
+
+function pass() {
+  return true;
+}
+
+function hasKeys(obj) {
+  return Object.keys(obj).length > 0
+}
+
+function removeNulls(obj) {
+  Object.keys(obj).forEach(function (key) {
+    if (!obj[key] || !hasKeys(obj[key]))
+      delete obj[key];
+  });
+  return obj;
+}
+
+function objectIfKeys(obj) {
+  return hasKeys(obj) ? obj : null;
+}
+
+function regexToValidator(format, message) {
+  return makeValidator({
+    message: message,
+    fn: function (thing) {
+      return format.test(thing);
+    }
+  });
+}
+
+const re = {
+  url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
+  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
+  email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
+  origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
+  version: /^v?\d+\.\d+(\.\d+)?$/,
+  date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
+  emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
+  identityType: /^(email)$/i,
+  verifyType: /^(hosted)|(signed)$/i,
+  unixtime: /^1\d{9}$/,
+}
+
+const isUrl = regexToValidator(re.url, 'must be a URL');
+const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
+const isEmail = regexToValidator(re.email, 'must be an email address');
+const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, hostname and optional port)');
+const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
+const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
+const isEmailOrHash = regexToValidator(re.emailOrHash, 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")');
+const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
+const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
+const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
+const isObject = makeValidator({
+  message: 'must be an object',
+  fn: function isObject(thing) {
+    return (
+      thing
+        && typeof thing === 'object'
+        && !Array.isArray(thing)
+    )
+  }
+});
+const isString = makeValidator({
+  message: 'must be a string',
+  fn: function isString(thing) {
+    return typeof thing === 'string'
+  }
+});
+const isArray = makeValidator({
+  message: 'must be an array',
+  fn: function isArray(validator) {
+    validator = validator || pass;
+    return function (thing) {
+      if (!Array.isArray(thing))
+        return false;
+      return thing.every(validator);
+    }
+  }
+});
+const isBoolean = makeValidator({
+  message: 'must be a boolean',
+  fn: function isBoolean(thing) {
+    return (
+      typeof thing === 'boolean'
+        || /false/i.test(thing)
+        || /true/i.test(thing)
+    )
+  }
+});
+const isUnixOrISOTime = makeValidator({
+  message: 'must be a unix timestamp or ISO8601 date string',
+  fn: function isUnixOrISOTime(thing) {
+    if (re.unixtime.test(thing))
+      return true;
+    try {
+      const type = dateutil.parse(thing).type;
+      return type !== 'unknown_date';
+    } catch (e) {
+      return false;
+    }
+  }
+});
+const isAbsoluteUrlOrDataURI = makeValidator({
+  message: 'must be an absolute URL or a dataURL',
+  fn: function isAbsoluteUrlOrDataURI(thing) {
+    if (isAbsoluteUrl(thing))
+      return true;
+    const image = dataurl.parse(thing);
+    if (image && image.mimetype === 'image/png')
+      return true;
+    return false
+  }
+});
+const isValidAlignmentStructure = makeValidator({
+  message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
+  fn: function isValidAlignmentStructure(thing) {
+    if (!isObject(thing))
+      return false;
+    if (!isString(thing.name))
+      return false;
+    if (thing.description && !isString(thing.description))
+      return false;
+    if (!isAbsoluteUrl(thing.url))
+      return false;
+    return true;
+  }
+});
+
+function makeOptionalValidator(errors) {
+  errors = errors || {};
+  return function optional(value, test, errObj) {
+    const message = errObj.message || test.message;
+    const field = errObj.field;
+    const code = errObj.code || test.code;
+    if (!value) return true;
+    if (!test(value)) {
+      errors[field] = makeError(code, message);
+      return false;
+    }
+    return true;
+  }
+}
+
+function makeRequiredValidator(errors) {
+  errors = errors || {};
+  return function required(value, test, errObj) {
+    const message = errObj.message || test.message;
+    const field = errObj.field;
+    const code = errObj.code || test.code;
+    if (typeof value === 'undefined'
+        || value === null
+        || !test(value)) {
+      errors[field] = makeError(code, message);
+      return false;
+    }
+    return true;
+  }
+}
+

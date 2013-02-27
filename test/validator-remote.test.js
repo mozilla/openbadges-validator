@@ -142,48 +142,15 @@ test('validator.unpackJWS: everything good', function (t) {
   });
 });
 
-test('validate', function (t) {
-  const assertion = generators['1.0.0-assertion']({
-    verify: {
-      type: 'signed',
-      url: 'https://example.org/public-key'
-    }
-  });
-  const badge = generators['1.0.0-badge']();
-  const issuer = generators['1.0.0-issuer']();
-  httpScope
-    .get('/').reply(200, 'root')
-    .get('/public-key').reply(200, keys.public)
-    .get('/badge').reply(200, JSON.stringify(badge))
-    .get('/issuer').reply(200, JSON.stringify(issuer))
-    .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
-    .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
-    .get('/issuer-image').reply(200, 'issuer-image')
-    .get('/evidence').reply(200, 'evidence')
-    .get('/criteria').reply(200, 'criteria')
-    .get('/revocation-list').reply(200, '{"found":true}')
-  const signature = jws.sign({
-    header: { alg: 'rs256' },
-    payload: assertion,
-    privateKey: keys.private
-  });
-  validator(signature, function (err, data) {
-    // console.dir(err);
-    // console.dir(data);
-    t.end();
-  });
+test('validator.checkRevoked', function (t) {
+  const result = validator.checkRevoked({'yep': 'some message'}, {uid: 'yep'});
+  t.same(result.code, 'verify-revoked');
+  t.same(result.message, 'some message');
+  t.end();
 });
 
-
-
-function forEach(obj, fn) {
-  Object.keys(obj).forEach(function (key) {
-    return fn(key, obj[key]);
-  });
-}
-
-function pluck(field) {
-  return function (obj) {
-    return obj[field];
-  }
-}
+test('validator.checkRevoked', function (t) {
+  const result = validator.checkRevoked({'other': ''}, {uid: 'yep'});
+  t.notOk(result, 'no error');
+  t.end();
+});
