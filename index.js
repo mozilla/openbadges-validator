@@ -231,11 +231,23 @@ validate.getLinkedResources = getLinkedResources;
 
 function validate(input, callback) {
   const errs = [];
+  if (isOldAssertion(input))
+    return fullValidateOldAssertion(input, callback)
   if (jws.isValid(input))
     return fullValidateSignedAssertion(input, callback);
-  if (!isOldAssertion(input))
-    return fullValidateBadgeAssertion(input, callback);
-  return callback(errs.length ? errs : null);
+  return fullValidateBadgeAssertion(input, callback);
+}
+
+function fullValidateOldAssertion(assertion, callback) {
+  getLinkedResources(assertion, function (err, resources) {
+    if (err)
+      return callback(err);
+    return callback(null, {
+      version: '0.5.0',
+      assertion: assertion,
+      resources: resources
+    });
+  });
 }
 
 function validateStructures(structures, callback) {
@@ -253,7 +265,7 @@ function validateStructures(structures, callback) {
 }
 
 function fullValidateBadgeAssertion(assertion, callback) {
-  const data = {};
+  const data = {version: '1.0.0'};
   async.waterfall([
     // #TODO: DRY this out, it's cmd+c, cmd+v from fullValidateSignedAssertion
     function getStructures(callback) {
@@ -300,7 +312,7 @@ function checkRevoked(list, assertion) {
 validate.checkRevoked = checkRevoked;
 
 function fullValidateSignedAssertion(signature, callback) {
-  const data = {signature: signature};
+  const data = {version: '1.0.0', signature: signature};
   async.waterfall([
     function unpack(callback) {
       return unpackJWS(signature, callback)

@@ -115,6 +115,20 @@ test('validate, new hosted, invalid', function (t) {
   });
 });
 
+test('validate, old style', function (t) {
+  httpScope
+    .get('/').reply(200, 'root')
+    .get('/image').reply(200, 'image', {'content-type': 'image/png'})
+    .get('/evidence').reply(200, 'evidence')
+    .get('/criteria').reply(200, 'criteria')
+  const assertion = generators['0.5.0']();
+  validator(assertion, function (err, data) {
+    t.notOk(err, 'no errors');
+    t.same(data.version, '0.5.0');
+    t.end();
+  });
+});
+
 function forEach(obj, fn) {
   Object.keys(obj).forEach(function (key) {
     return fn(key, obj[key]);
