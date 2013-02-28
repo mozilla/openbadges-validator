@@ -4,10 +4,17 @@ const async = require('async');
 const request = require('request');
 const dataurl = require('dataurl');
 const dateutil = require('dateutil');
+const deepEqual = require('deep-equal');
 const resources = require('./lib/resources');
 
 function isOldAssertion(assertion) {
-  return isObject(assertion.badge);
+  if (!assertion)
+    return null;
+  if (!isObject(assertion.badge))
+    return false;
+  if (!isObject(assertion.badge.issuer))
+    return false;
+  return true;
 }
 
 function validateAssertion(assertion, prefix){
@@ -183,10 +190,22 @@ function getLinkedStructures(assertion, callback) {
 }
 validate.getLinkedStructures = getLinkedStructures;
 
-// `structures` should be the response from `getLinkedStructures`
+// `structures` should be the response from `getLinkedStructures`,
+// OR a valid old-style assertion
 // callback has signature `function (errs, responses)`
 function getLinkedResources(structures, callback) {
-  resources(structures, {
+  if (isOldAssertion(structures)) {
+    const assertion = absolutize(structures);
+    return resources(assertion, {
+      'evidence': { required: false },
+      'badge.criteria': { required: true },
+      'badge.image': {
+        required: true,
+        'content-type': 'image/png',
+      },
+    }, callback);
+  }
+  return resources(structures, {
     'assertion.image': {
       required: false,
       'content-type': 'image/png'
@@ -205,8 +224,58 @@ function getLinkedResources(structures, callback) {
     'issuer.image': { required: false },
     'issuer.revocationList': { required: true, json: true }
   }, callback);
+
 }
 validate.getLinkedResources = getLinkedResources;
+
+
+function validate(input, callback) {
+  const errs = [];
+  if (jws.isValid(input))
+    return fullValidateSignedAssertion(input, callback);
+  if (!isOldAssertion(input))
+    return fullValidateBadgeAssertion(input, callback);
+  return callback(errs.length ? errs : null);
+}
+
+function validateStructures(structures, callback) {
+  const errors = {
+    assertion: validateAssertion(structures.assertion),
+    badge: validateBadgeClass(structures.badge),
+    issuer: validateIssuerOrganization(structures.issuer),
+  }
+  if (errors.assertion || errors.badge || errors.issuer) {
+    const error = makeError('structure');
+    error.extra = removeNulls(errors);
+    return callback(error);
+  }
+  return callback(null, structures);
+}
+
+function fullValidateBadgeAssertion(assertion, callback) {
+  const data = {};
+  async.waterfall([
+    // #TODO: DRY this out, it's cmd+c, cmd+v from fullValidateSignedAssertion
+    function getStructures(callback) {
+      return getLinkedStructures(assertion, callback);
+    },
+    validateStructures,
+    function getResources(structures, callback) {
+      data.structures = structures;
+      return getLinkedResources(structures, callback);
+    },
+    function validateHosted(resources, callback) {
+      data.resources = resources;
+      const hostedAssertion = resources['assertion.verify.url'];
+      const localAssertion = data.structures.assertion;
+      if (!deepEqual(hostedAssertion, localAssertion))
+        return callback(makeError('verify-hosted'));
+      return callback()
+    }
+  ], function (errs) {
+    callback(errs, data);
+  });
+};
 
 function unpackJWS(signature, callback) {
   const parts = jws.decode(signature);
@@ -230,13 +299,6 @@ function checkRevoked(list, assertion) {
 }
 validate.checkRevoked = checkRevoked;
 
-function validate(input, callback) {
-  const errs = [];
-  if (jws.isValid(input))
-    return fullValidateSignedAssertion(input, callback);
-  return callback(errs.length ? errs : null);
-}
-
 function fullValidateSignedAssertion(signature, callback) {
   const data = {signature: signature};
   async.waterfall([
@@ -246,19 +308,7 @@ function fullValidateSignedAssertion(signature, callback) {
     function getStructures(assertion, callback) {
       return getLinkedStructures(assertion, callback);
     },
-    function validateStructures(structures, callback) {
-      const errors = {
-        assertion: validateAssertion(structures.assertion),
-        badge: validateBadgeClass(structures.badge),
-        issuer: validateIssuerOrganization(structures.issuer),
-      }
-      if (errors.assertion || errors.badge || errors.issuer) {
-        const error = makeError('structure');
-        error.extra = removeNulls(errors);
-        return callback(error);
-      }
-      return callback(null, structures);
-    },
+    validateStructures,
     function getResources(structures, callback) {
       data.structures = structures;
       return getLinkedResources(structures, callback);
@@ -358,11 +408,9 @@ const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp
 const isObject = makeValidator({
   message: 'must be an object',
   fn: function isObject(thing) {
-    return (
-      thing
-        && typeof thing === 'object'
-        && !Array.isArray(thing)
-    )
+    return !!thing &&
+      typeof thing === 'object' &&
+      !Array.isArray(thing)
   }
 });
 const isString = makeValidator({

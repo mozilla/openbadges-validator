@@ -98,6 +98,21 @@ test('validator.getLinkedResources, all errors', function (t) {
   });
 });
 
+test('validator.getLinkedResources, old assertion', function (t) {
+  httpScope
+    .get('/').reply(200, 'root')
+    .get('/image').reply(200, 'image', {'content-type': 'image/png'})
+    .get('/evidence').reply(200, 'evidence')
+    .get('/criteria').reply(200, 'criteria')
+  const assertion = generators['0.5.0']();
+  validator.getLinkedResources(assertion, function (err, results) {
+    t.same(results['evidence'], 'evidence');
+    t.same(results['badge.criteria'], 'criteria');
+    t.same(results['badge.image'], 'image');
+    t.end();
+  });
+});
+
 test('validator.unpackJWS: bad JWS', function (t) {
   validator.unpackJWS('whatever lol', function (err, payload) {
     t.same(err.code, 'jws-decode');

@@ -1,7 +1,7 @@
 {
   "name": "openbadges-validator",
   "version": "0.0.1",
-  "description": "OpenBadges Validation Tools",
+  "description": "openbadges validation tools",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -12,7 +12,8 @@
     "dataurl": "~0.1.0",
     "request": "~2.14.0",
     "async": "~0.2.5",
-    "jws": "~0.2.1"
+    "jws": "~0.2.1",
+    "deep-equal": "0.0.0"
   },
   "devDependencies": {
     "tap": "~0.4.0"
