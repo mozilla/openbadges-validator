@@ -106,7 +106,7 @@ test('validator.getLinkedResources, old assertion', function (t) {
     .get('/criteria').reply(200, 'criteria')
   const assertion = generators['0.5.0']();
   validator.getLinkedResources(assertion, function (err, results) {
-    t.same(results['evidence'], 'evidence');
+    t.same(results['assertion.evidence'], 'evidence');
     t.same(results['badge.criteria'], 'criteria');
     t.same(results['badge.image'], 'image');
     t.end();

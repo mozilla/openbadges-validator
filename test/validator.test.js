@@ -52,8 +52,6 @@ test('0.5.0 badges with errors', function (t) {
     required('badge.criteria');
     optional('badge.version');
 
-    object('badge.issuer');
-
     required('badge.issuer.name');
     required('badge.issuer.contact');
     required('badge.issuer.origin');

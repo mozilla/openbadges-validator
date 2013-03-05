@@ -399,6 +399,10 @@ function regexToValidator(format, message) {
   });
 }
 
+function getInternalClass(thing) {
+  return Object.prototype.toString.call(thing);
+}
+
 const re = {
   url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
   absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
@@ -425,9 +429,7 @@ const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp
 const isObject = makeValidator({
   message: 'must be an object',
   fn: function isObject(thing) {
-    return !!thing &&
-      typeof thing === 'object' &&
-      !Array.isArray(thing)
+    return getInternalClass(thing) == '[object Object]';
   }
 });
 const isString = makeValidator({
