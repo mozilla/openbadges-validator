@@ -1,5 +1,11 @@
 # OpenBadges Validator Tools [![Build Status](https://secure.travis-ci.org/mozilla/openbadges-validator.png?branch=master)](http://travis-ci.org/mozilla/openbadges-validator)
 
+# Installing
+
+```bash
+$ npm install openbadges-validator
+```
+
 # Usage
 
 ## validator(assertionOrSignature, callback)
@@ -29,3 +35,7 @@ The callback is passed two arguments, `(err, info)`.
   - `issuer.url`
   - `issuer.image`
   - `issuer.revocationList`
+
+# License
+
+[MPL 2.0](http://www.mozilla.org/MPL/2.0/)
