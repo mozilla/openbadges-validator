@@ -196,8 +196,12 @@ validate.getLinkedStructures = getLinkedStructures;
 function getLinkedResources(structures, callback) {
   if (isOldAssertion(structures)) {
     const assertion = absolutize(structures);
-    return resources(assertion, {
-      'evidence': { required: false },
+    return resources({
+      assertion: assertion,
+      badge: assertion.badge,
+      issuer: assertion.issuer
+    }, {
+      'assertion.evidence': { required: false },
       'badge.criteria': { required: true },
       'badge.image': {
         required: true,
@@ -245,6 +249,8 @@ function fullValidateOldAssertion(assertion, callback) {
     return callback(null, {
       version: '0.5.0',
       assertion: assertion,
+      badge: assertion.badge,
+      issuer: assertion.badge.issuer,
       resources: resources
     });
   });
@@ -267,7 +273,6 @@ function validateStructures(structures, callback) {
 function fullValidateBadgeAssertion(assertion, callback) {
   const data = {version: '1.0.0'};
   async.waterfall([
-    // #TODO: DRY this out, it's cmd+c, cmd+v from fullValidateSignedAssertion
     function getStructures(callback) {
       return getLinkedStructures(assertion, callback);
     },

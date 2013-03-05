@@ -34,6 +34,8 @@ test('validate, signed', function (t) {
   });
   validator(signature, function (err, data) {
     t.notOk(err, 'no errors');
+    t.same(data.signature, signature);
+    t.same(data.resources['badge.image'], 'badge-image');
     t.end();
   });
 });
@@ -125,6 +127,7 @@ test('validate, old style', function (t) {
   validator(assertion, function (err, data) {
     t.notOk(err, 'no errors');
     t.same(data.version, '0.5.0');
+    t.same(data.assertion.badge, data.badge);
     t.end();
   });
 });
