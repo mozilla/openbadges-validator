@@ -148,8 +148,10 @@ function absolutize(assertion) {
   const image = assertion.badge.image;
   const evidence = assertion.evidence;
 
-  assertion.badge.criteria = origin + criteria;
-  assertion.badge.image = origin + image;
+  if (criteria)
+    assertion.badge.criteria = origin + criteria;
+  if (image)
+    assertion.badge.image = origin + image;
   if (evidence)
     assertion.evidence = origin + evidence;
   return assertion;
