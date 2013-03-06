@@ -196,6 +196,12 @@ validate.getLinkedStructures = getLinkedStructures;
 // OR a valid old-style assertion
 // callback has signature `function (errs, responses)`
 function getLinkedResources(structures, callback) {
+  function hollaback(err, result) {
+    const errMsg = 'could not validate linked resources';
+    if (err)
+      return callback(makeError('resources', errMsg, err));
+    return callback(null, result);
+  }
   if (isOldAssertion(structures)) {
     const assertion = absolutize(structures);
     return resources({
@@ -209,7 +215,7 @@ function getLinkedResources(structures, callback) {
         required: true,
         'content-type': 'image/png',
       },
-    }, callback);
+    }, hollaback);
   }
   return resources(structures, {
     'assertion.image': {
@@ -229,7 +235,7 @@ function getLinkedResources(structures, callback) {
     'issuer.url': { required: true },
     'issuer.image': { required: false },
     'issuer.revocationList': { required: true, json: true }
-  }, callback);
+  }, hollaback);
 
 }
 validate.getLinkedResources = getLinkedResources;
@@ -242,20 +248,6 @@ function validate(input, callback) {
   if (jws.isValid(input))
     return fullValidateSignedAssertion(input, callback);
   return fullValidateBadgeAssertion(input, callback);
-}
-
-function fullValidateOldAssertion(assertion, callback) {
-  getLinkedResources(assertion, function (err, resources) {
-    if (err)
-      return callback(err);
-    return callback(null, {
-      version: '0.5.0',
-      assertion: assertion,
-      badge: assertion.badge,
-      issuer: assertion.badge.issuer,
-      resources: resources
-    });
-  });
 }
 
 function validateStructures(structures, callback) {
@@ -271,30 +263,6 @@ function validateStructures(structures, callback) {
   }
   return callback(null, structures);
 }
-
-function fullValidateBadgeAssertion(assertion, callback) {
-  const data = {version: '1.0.0'};
-  async.waterfall([
-    function getStructures(callback) {
-      return getLinkedStructures(assertion, callback);
-    },
-    validateStructures,
-    function getResources(structures, callback) {
-      data.structures = structures;
-      return getLinkedResources(structures, callback);
-    },
-    function validateHosted(resources, callback) {
-      data.resources = resources;
-      const hostedAssertion = resources['assertion.verify.url'];
-      const localAssertion = data.structures.assertion;
-      if (!deepEqual(hostedAssertion, localAssertion))
-        return callback(makeError('verify-hosted'));
-      return callback()
-    }
-  ], function (errs) {
-    callback(errs, data);
-  });
-};
 
 function unpackJWS(signature, callback) {
   const parts = jws.decode(signature);
@@ -318,15 +286,47 @@ function checkRevoked(list, assertion) {
 }
 validate.checkRevoked = checkRevoked;
 
+function fullValidateOldAssertion(assertion, callback) {
+  getLinkedResources(assertion, function (err, resources) {
+    if (err)
+      return callback(err);
+    return callback(null, {
+      version: '0.5.0',
+      assertion: assertion,
+      badge: assertion.badge,
+      issuer: assertion.badge.issuer,
+      resources: resources
+    });
+  });
+}
+
+function fullValidateBadgeAssertion(assertion, callback) {
+  const data = {version: '1.0.0'};
+  async.waterfall([
+    getLinkedStructures.bind(null, assertion),
+    validateStructures,
+    function getResources(structures, callback) {
+      data.structures = structures;
+      return getLinkedResources(structures, callback);
+    },
+    function validateHosted(resources, callback) {
+      data.resources = resources;
+      const hostedAssertion = resources['assertion.verify.url'];
+      const localAssertion = data.structures.assertion;
+      if (!deepEqual(hostedAssertion, localAssertion))
+        return callback(makeError('verify-hosted'));
+      return callback()
+    }
+  ], function (errs) {
+    callback(errs, data);
+  });
+};
+
 function fullValidateSignedAssertion(signature, callback) {
   const data = {version: '1.0.0', signature: signature};
   async.waterfall([
-    function unpack(callback) {
-      return unpackJWS(signature, callback)
-    },
-    function getStructures(assertion, callback) {
-      return getLinkedStructures(assertion, callback);
-    },
+    unpackJWS.bind(null, signature),
+    getLinkedStructures,
     validateStructures,
     function getResources(structures, callback) {
       data.structures = structures;
@@ -361,9 +361,13 @@ validate.badgeClass = validateBadgeClass;
 validate.issuerOrganization = validateIssuerOrganization;
 
 
-function makeError(code, message) {
+function makeError(code, message, extra) {
+  if (isObject(message))
+    extra = message, message = null;
   const err = new Error(message||code);
   err.code = code;
+  if (extra)
+    err.extra = extra;
   return err;
 }
 

@@ -58,14 +58,15 @@ test('validator.getLinkedResources, all errors', function (t) {
     issuer: generators['1.0.0-issuer']()
   };
   validator.getLinkedResources(structures, function (err, results) {
-    t.same(err['assertion.image'].code, 'unreachable');
-    t.same(err['assertion.verify.url'].code, 'unreachable');
-    t.same(err['assertion.evidence'].code, 'unreachable');
-    t.same(err['badge.image'].code, 'unreachable');
-    t.same(err['badge.criteria'].code, 'unreachable');
-    t.same(err['issuer.url'].code, 'unreachable');
-    t.same(err['issuer.image'].code, 'unreachable');
-    t.same(err['issuer.revocationList'].code, 'unreachable');
+    t.same(err.code, 'resources', 'code should be resources');
+    t.same(err.extra['assertion.image'].code, 'unreachable');
+    t.same(err.extra['assertion.verify.url'].code, 'unreachable');
+    t.same(err.extra['assertion.evidence'].code, 'unreachable');
+    t.same(err.extra['badge.image'].code, 'unreachable');
+    t.same(err.extra['badge.criteria'].code, 'unreachable');
+    t.same(err.extra['issuer.url'].code, 'unreachable');
+    t.same(err.extra['issuer.image'].code, 'unreachable');
+    t.same(err.extra['issuer.revocationList'].code, 'unreachable');
     t.end();
   });
 });
