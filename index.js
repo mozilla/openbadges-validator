@@ -373,6 +373,7 @@ function makeError(code, message, extra) {
   err.code = code;
   if (extra)
     err.extra = extra;
+  Object.defineProperty(err, 'message', { enumerable: true });
   return err;
 }
 
