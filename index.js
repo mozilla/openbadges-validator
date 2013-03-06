@@ -153,11 +153,11 @@ function absolutize(assertion) {
   const evidence = assertion.evidence;
 
   const result = clone(assertion);
-  if (criteria)
+  if (criteria && !isAbsoluteUrl(criteria))
     result.badge.criteria = origin + criteria;
-  if (image)
+  if (image && !isAbsoluteUrl(image))
     result.badge.image = origin + image;
-  if (evidence)
+  if (evidence && !isAbsoluteUrl(evidence))
     result.evidence = origin + evidence;
   return result;
 }

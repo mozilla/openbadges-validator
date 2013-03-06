@@ -129,21 +129,6 @@ test('1.0.0-issuer: some errors', function (t) {
   t.end();
 });
 
-test('validator.absolutize', function (t) {
-  const assertion = generators['0.5.0']({
-    'evidence': '/evidence',
-    'badge.criteria': '/criteria',
-    'badge.image': '/image',
-    'badge.issuer.origin': 'https://example.org'
-  });
-  const result = validator.absolutize(assertion);
-  t.same(result.evidence, 'https://example.org/evidence', 'evidence should be correct');
-  t.same(result.badge.criteria, 'https://example.org/criteria', 'criteria should be correct');
-  t.same(result.badge.image, 'https://example.org/image', 'image should be correct');
-  t.end();
-});
-
-
 
 /** Test macros
  *
