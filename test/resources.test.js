@@ -9,7 +9,7 @@ test('getUrl: required, missing', function (t) {
   resources.getUrl({
     required: true,
   }, function (ex, result) {
-    t.same(result.error.code, 'missing', 'should be a missing error');
+    t.same(result.error.code, 'required', 'should be a missing error');
     t.end();
   });
 });
@@ -26,12 +26,13 @@ test('getUrl: required, unreachable', function (t) {
 
 test('getUrl: required, HTTP 404', function (t) {
   httpScope
-    .get('/test').reply(404)
+    .get('/test').reply(412)
   resources.getUrl({
     url: ORIGIN + '/test',
     required: true,
   }, function (ex, result) {
     t.same(result.error.code, 'http-status', 'should be http response error');
+    t.same(result.error.received, 412, 'should be 412 status');
     t.end();
   });
 });
@@ -45,6 +46,7 @@ test('getUrl: required, wrong content type', function (t) {
     'content-type': 'text/plain',
   }, function (ex, result) {
     t.same(result.error.code, 'content-type', 'should be a content-type error');
+    t.same(result.error.received, 'application/msword', 'should have gotten application/msword');
     t.end();
   });
 });
@@ -137,7 +139,7 @@ test('resources', function (t) {
     t.same(err['b.image'].code, 'content-type');
     t.same(err['c.optional'].code, 'http-status');
     t.same(err['c.image'].code, 'unreachable');
-    t.same(err['d.does.not.exist'].code, 'missing');
+    t.same(err['d.does.not.exist'].code, 'required');
     t.end();
   });
 });
