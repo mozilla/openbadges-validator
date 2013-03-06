@@ -34,7 +34,7 @@ test('validator.getLinkedStructures: missing `issuer`', function (t) {
   const assertion = generators['1.0.0-assertion']();
   validator.getLinkedStructures(assertion, function (err, results) {
     t.same(err.field, 'issuer')
-    t.same(err.code, 'missing')
+    t.same(err.code, 'required')
     t.end();
   });
 });

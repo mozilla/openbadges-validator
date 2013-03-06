@@ -256,13 +256,14 @@ function validate(input, callback) {
 }
 
 function validateStructures(structures, callback) {
+  const errMsg = 'invalid assertion structure';
   const errors = {
     assertion: validateAssertion(structures.assertion),
     badge: validateBadgeClass(structures.badge),
     issuer: validateIssuerOrganization(structures.issuer),
   }
   if (errors.assertion || errors.badge || errors.issuer)
-    return callback(makeError('structure', removeNulls(errors)));
+    return callback(makeError('structure', errMsg, removeNulls(errors)));
   return callback(null, structures);
 }
 
