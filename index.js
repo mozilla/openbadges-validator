@@ -133,6 +133,10 @@ function validateOldAssertion(assertion, prefix) {
   return objectIfKeys(errs);
 };
 
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 function absolutize(assertion) {
   if (!isOldAssertion(assertion))
     return assertion;
@@ -148,13 +152,14 @@ function absolutize(assertion) {
   const image = assertion.badge.image;
   const evidence = assertion.evidence;
 
+  const result = clone(assertion);
   if (criteria)
-    assertion.badge.criteria = origin + criteria;
+    result.badge.criteria = origin + criteria;
   if (image)
-    assertion.badge.image = origin + image;
+    result.badge.image = origin + image;
   if (evidence)
-    assertion.evidence = origin + evidence;
-  return assertion;
+    result.evidence = origin + evidence;
+  return result;
 }
 
 function jsonParse(thing) {

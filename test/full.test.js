@@ -124,15 +124,17 @@ test('validate, old style', function (t) {
     .get('/evidence').reply(200, 'evidence')
     .get('/criteria').reply(200, 'criteria')
   const assertion = generators['0.5.0']();
+  const originalCriteria = assertion.badge.criteria;
   validator(assertion, function (err, data) {
     t.notOk(err, 'no errors');
     t.same(data.version, '0.5.0');
     t.same(data.assertion.badge, data.badge);
+    t.same(data.badge.criteria, originalCriteria);
     t.end();
   });
 });
 
-test('validate, old style', function (t) {
+test('validate, old style: invalid structure', function (t) {
   const assertion = generators['0.5.0']({'badge.criteria': null});
   validator(assertion, function (err, data) {
     t.same(err.code, 'structure');
