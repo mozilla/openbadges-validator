@@ -1,3 +1,4 @@
+const fs = require('fs');
 const test = require('tap').test;
 const resources = require('../lib/resources');
 const nock = require('nock');
@@ -72,7 +73,7 @@ test('getUrl: optional, exists', function (t) {
   }, function (ex, result) {
     t.notOk(ex, 'no exceptions');
     t.notOk(result.error, 'no errors')
-    t.same(result.body, 'stuff', 'should get right body');
+    t.same(result.body.toString(), 'stuff', 'should get right body');
     t.end();
   });
 });
@@ -106,6 +107,19 @@ test('getUrl: json, parseable', function (t) {
   });
 });
 
+test('getUrl: image data', function (t) {
+  const imgData = fs.readFileSync(__dirname + '/cc.large.png');
+  httpScope
+    .get('/test').reply(200, imgData, {'content-type': 'image/png'})
+  resources.getUrl({
+    url: ORIGIN + '/test',
+    required: true
+  }, function (ex, result) {
+    t.same(imgData, result.body);
+    t.end();
+  });
+});
+
 
 
 test('resources', function (t) {
@@ -133,8 +147,8 @@ test('resources', function (t) {
     'c.image': { required: true },
     'd.does.not.exist': { optional: false }
   }, function (err, results) {
-    t.same(results['a.root'], 'a.root');
-    t.same(results['a.nested.url'], 'a.nested.url');
+    t.same(results['a.root'].toString(), 'a.root');
+    t.same(results['a.nested.url'].toString(), 'a.nested.url');
 
     t.same(err['b.image'].code, 'content-type');
     t.same(err['c.optional'].code, 'http-status');

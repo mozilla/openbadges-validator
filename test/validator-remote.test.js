@@ -87,13 +87,13 @@ test('validator.getLinkedResources, all errors', function (t) {
     issuer: generators['1.0.0-issuer']()
   };
   validator.getLinkedResources(structures, function (err, results) {
-    t.same(results['assertion.image'], 'assertion-image');
+    t.same(str(results['assertion.image']), 'assertion-image');
     t.same(results['assertion.verify.url'], {found:true});
-    t.same(results['assertion.evidence'], 'evidence');
-    t.same(results['badge.image'], 'badge-image');
-    t.same(results['badge.criteria'], 'criteria');
-    t.same(results['issuer.url'], 'root');
-    t.same(results['issuer.image'], 'issuer-image');
+    t.same(str(results['assertion.evidence']), 'evidence');
+    t.same(str(results['badge.image']), 'badge-image');
+    t.same(str(results['badge.criteria']), 'criteria');
+    t.same(str(results['issuer.url']), 'root');
+    t.same(str(results['issuer.image']), 'issuer-image');
     t.same(results['issuer.revocationList'], {found:true});
     t.end();
   });
@@ -107,9 +107,9 @@ test('validator.getLinkedResources, old assertion', function (t) {
     .get('/criteria').reply(200, 'criteria')
   const assertion = generators['0.5.0']();
   validator.getLinkedResources(assertion, function (err, results) {
-    t.same(results['assertion.evidence'], 'evidence');
-    t.same(results['badge.criteria'], 'criteria');
-    t.same(results['badge.image'], 'image');
+    t.same(str(results['assertion.evidence']), 'evidence');
+    t.same(str(results['badge.criteria']), 'criteria');
+    t.same(str(results['badge.image']), 'image');
     t.end();
   });
 });
@@ -170,3 +170,7 @@ test('validator.checkRevoked', function (t) {
   t.notOk(result, 'no error');
   t.end();
 });
+
+function str(buf) {
+  return buf.toString();
+}

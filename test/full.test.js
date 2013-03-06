@@ -35,7 +35,7 @@ test('validate, signed', function (t) {
   validator(signature, function (err, data) {
     t.notOk(err, 'no errors');
     t.same(data.signature, signature);
-    t.same(data.resources['badge.image'], 'badge-image');
+    t.same(str(data.resources['badge.image']), 'badge-image');
     t.end();
   });
 });
@@ -153,4 +153,8 @@ function pluck(field) {
   return function (obj) {
     return obj[field];
   }
+}
+
+function str(a) {
+  return a.toString();
 }
