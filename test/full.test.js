@@ -132,6 +132,15 @@ test('validate, old style', function (t) {
   });
 });
 
+test('validate, old style', function (t) {
+  const assertion = generators['0.5.0']({'badge.criteria': null});
+  validator(assertion, function (err, data) {
+    t.same(err.code, 'structure');
+    t.ok(err.extra['badge.criteria'], 'should be a criteria error');
+    t.end();
+  });
+});
+
 function forEach(obj, fn) {
   Object.keys(obj).forEach(function (key) {
     return fn(key, obj[key]);

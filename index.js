@@ -256,11 +256,8 @@ function validateStructures(structures, callback) {
     badge: validateBadgeClass(structures.badge),
     issuer: validateIssuerOrganization(structures.issuer),
   }
-  if (errors.assertion || errors.badge || errors.issuer) {
-    const error = makeError('structure');
-    error.extra = removeNulls(errors);
-    return callback(error);
-  }
+  if (errors.assertion || errors.badge || errors.issuer)
+    return callback(makeError('structure', removeNulls(errors)));
   return callback(null, structures);
 }
 
@@ -287,6 +284,9 @@ function checkRevoked(list, assertion) {
 validate.checkRevoked = checkRevoked;
 
 function fullValidateOldAssertion(assertion, callback) {
+  const structuralErrors = validateAssertion(assertion);
+  if (structuralErrors)
+    return callback(makeError('structure', structuralErrors));
   getLinkedResources(assertion, function (err, resources) {
     if (err)
       return callback(err);
