@@ -239,7 +239,10 @@ function getLinkedResources(structures, callback) {
     },
     'issuer.url': { required: true },
     'issuer.image': { required: false },
-    'issuer.revocationList': { required: true, json: true }
+    'issuer.revocationList': {
+      required: false,
+      json: true
+    }
   }, hollaback);
 
 }
