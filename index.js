@@ -301,9 +301,11 @@ function fullValidateOldAssertion(assertion, callback) {
       return callback(err);
     return callback(null, {
       version: '0.5.0',
-      assertion: assertion,
-      badge: assertion.badge,
-      issuer: assertion.badge.issuer,
+      structures: {
+        assertion: assertion,
+        badge: assertion.badge,
+        issuer: assertion.badge.issuer
+      },
       resources: resources
     });
   });

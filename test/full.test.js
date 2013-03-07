@@ -128,8 +128,8 @@ test('validate, old style', function (t) {
   validator(assertion, function (err, data) {
     t.notOk(err, 'no errors');
     t.same(data.version, '0.5.0');
-    t.same(data.assertion.badge, data.badge);
-    t.same(data.badge.criteria, originalCriteria);
+    t.same(data.structures.assertion.badge, data.structures.badge);
+    t.same(data.structures.badge.criteria, originalCriteria);
     t.end();
   });
 });
