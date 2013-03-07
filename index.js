@@ -163,6 +163,8 @@ function absolutize(assertion) {
 }
 
 function jsonParse(thing) {
+  if (isObject(thing))
+    return thing;
   try {return JSON.parse(thing) }
   catch (ex) { return false }
 }
@@ -195,7 +197,6 @@ function getLinkedStructures(assertion, callback) {
     return callback(err, structures);
   });
 }
-validate.getLinkedStructures = getLinkedStructures;
 
 // `structures` should be the response from `getLinkedStructures`,
 // OR a valid old-style assertion
@@ -244,18 +245,21 @@ function getLinkedResources(structures, callback) {
       json: true
     }
   }, hollaback);
-
 }
-validate.getLinkedResources = getLinkedResources;
-
 
 function validate(input, callback) {
   const errs = [];
-  if (isOldAssertion(input))
-    return fullValidateOldAssertion(input, callback)
-  if (jws.isValid(input))
-    return fullValidateSignedAssertion(input, callback);
-  return fullValidateBadgeAssertion(input, callback);
+  if (isObject(input)) {
+    if (isOldAssertion(input))
+      return fullValidateOldAssertion(input, callback)
+    return fullValidateBadgeAssertion(input, callback);
+  }
+  if (typeof input === 'string') {
+    if (isSignedBadge(input))
+      return fullValidateSignedAssertion(input, callback);
+    return callback(makeError('input', 'not a valid signed badge', { input: input }));
+  }
+  return callback(makeError('input', 'input must be a string or object', { input: input }));
 }
 
 function validateStructures(structures, callback) {
@@ -281,7 +285,6 @@ function unpackJWS(signature, callback) {
     return callback(makeError('jws-payload-parse'));
   return callback(null, payload)
 }
-validate.unpackJWS = unpackJWS;
 
 
 function checkRevoked(list, assertion) {
@@ -290,7 +293,6 @@ function checkRevoked(list, assertion) {
   if ((msg =list[assertion.uid]))
     return makeError('verify-revoked', msg);
 }
-validate.checkRevoked = checkRevoked;
 
 function fullValidateOldAssertion(assertion, callback) {
   const structuralErrors = validateAssertion(assertion);
@@ -362,15 +364,18 @@ function fullValidateSignedAssertion(signature, callback) {
     return callback(errs, data);
   })
 }
-module.exports = validate;
 
-validate.isOldAssertion = isOldAssertion;
-validate.absolutize = absolutize;
-
-validate.assertion = validateAssertion;
-validate.badgeClass = validateBadgeClass;
-validate.issuerOrganization = validateIssuerOrganization;
-
+function isSignedBadge(thing) {
+  const decoded = jws.decode(thing);
+  if (!decoded)
+    return false;
+  const assertion = jsonParse(decoded.payload);
+  if (!assertion)
+    return false;
+  if (!assertion.recipient)
+    return false;
+  return true;
+}
 
 function makeError(code, message, extra) {
   if (isObject(message))
@@ -547,3 +552,15 @@ function makeRequiredValidator(errors) {
   }
 }
 
+module.exports = validate;
+
+validate.isOldAssertion = isOldAssertion;
+validate.absolutize = absolutize;
+validate.assertion = validateAssertion;
+validate.badgeClass = validateBadgeClass;
+validate.issuerOrganization = validateIssuerOrganization;
+validate.isSignedBadge = isSignedBadge
+validate.getLinkedStructures = getLinkedStructures;
+validate.checkRevoked = checkRevoked;
+validate.unpackJWS = unpackJWS;
+validate.getLinkedResources = getLinkedResources;

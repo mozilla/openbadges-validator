@@ -1,6 +1,16 @@
+const jws = require('jws');
 const test = require('tap').test;
 const validator = require('..');
 const generators = require('./test-generators.js');
+const keys = require('./test-keys.js');
+
+function sign(thing) {
+  return jws.sign({
+    header: { alg: 'rs256' },
+    payload: thing,
+    privateKey: keys.private
+  });
+}
 
 test('validator.absolutize: all relative', function (t) {
   const assertion = generators['0.5.0']({
@@ -30,3 +40,9 @@ test('validator.absolutize: all absolute', function (t) {
   t.end();
 });
 
+test('validator.isSignedBadge', function (t) {
+  t.same(validator.isSignedBadge(sign('sup')), false);
+  t.same(validator.isSignedBadge(sign({some: 'thing'})), false);
+  t.same(validator.isSignedBadge(sign({recipient: 'yep'})), true);
+  t.end();
+});
