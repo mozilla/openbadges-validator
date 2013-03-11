@@ -61,10 +61,7 @@ test('validator.getLinkedResources, all errors', function (t) {
     t.same(err.code, 'resources', 'code should be resources');
     t.same(err.extra['assertion.image'].code, 'unreachable');
     t.same(err.extra['assertion.verify.url'].code, 'unreachable');
-    t.same(err.extra['assertion.evidence'].code, 'unreachable');
     t.same(err.extra['badge.image'].code, 'unreachable');
-    t.same(err.extra['badge.criteria'].code, 'unreachable');
-    t.same(err.extra['issuer.url'].code, 'unreachable');
     t.same(err.extra['issuer.image'].code, 'unreachable');
     t.same(err.extra['issuer.revocationList'].code, 'unreachable');
     t.end();
@@ -73,13 +70,10 @@ test('validator.getLinkedResources, all errors', function (t) {
 
 test('validator.getLinkedResources, all errors', function (t) {
   httpScope
-    .get('/').reply(200, 'root')
     .get('/assertion').reply(200, '{"found":true}')
     .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
     .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
     .get('/issuer-image').reply(200, 'issuer-image')
-    .get('/evidence').reply(200, 'evidence')
-    .get('/criteria').reply(200, 'criteria')
     .get('/revocation-list').reply(200, '{"found":true}')
   const structures = {
     assertion: generators['1.0.0-assertion'](),
@@ -89,10 +83,7 @@ test('validator.getLinkedResources, all errors', function (t) {
   validator.getLinkedResources(structures, function (err, results) {
     t.same(str(results['assertion.image']), 'assertion-image');
     t.same(results['assertion.verify.url'], {found:true});
-    t.same(str(results['assertion.evidence']), 'evidence');
     t.same(str(results['badge.image']), 'badge-image');
-    t.same(str(results['badge.criteria']), 'criteria');
-    t.same(str(results['issuer.url']), 'root');
     t.same(str(results['issuer.image']), 'issuer-image');
     t.same(results['issuer.revocationList'], {found:true});
     t.end();
@@ -103,12 +94,8 @@ test('validator.getLinkedResources, old assertion', function (t) {
   httpScope
     .get('/').reply(200, 'root')
     .get('/image').reply(200, 'image', {'content-type': 'image/png'})
-    .get('/evidence').reply(200, 'evidence')
-    .get('/criteria').reply(200, 'criteria')
   const assertion = generators['0.5.0']();
   validator.getLinkedResources(assertion, function (err, results) {
-    t.same(str(results['assertion.evidence']), 'evidence');
-    t.same(str(results['badge.criteria']), 'criteria');
     t.same(str(results['badge.image']), 'image');
     t.end();
   });

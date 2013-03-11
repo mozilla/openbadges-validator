@@ -215,8 +215,6 @@ function getLinkedResources(structures, callback) {
       badge: assertion.badge,
       issuer: assertion.issuer
     }, {
-      'assertion.evidence': { required: false },
-      'badge.criteria': { required: true },
       'badge.image': {
         required: true,
         'content-type': 'image/png',
@@ -232,13 +230,10 @@ function getLinkedResources(structures, callback) {
       required: true,
       json: structures.assertion.verify.type === 'hosted'
     },
-    'assertion.evidence': { required: false },
-    'badge.criteria': { required: true },
     'badge.image': {
       required: true,
       'content-type': 'image/png'
     },
-    'issuer.url': { required: true },
     'issuer.image': { required: false },
     'issuer.revocationList': {
       required: false,
