@@ -93,6 +93,14 @@ test('validate, new hosted', function (t) {
   });
 });
 
+test('validate, new, passed object when should pass signature', function (t) {
+  const assertion = generators['1.0.0-assertion']({'verify.type': 'signed'});
+  validator(assertion, function (err, data) {
+    t.same(err.code, 'verify-type-mismatch');
+    t.end();
+  });
+});
+
 test('validate, new hosted, invalid', function (t) {
   const assertion = generators['1.0.0-assertion']();
   const wrongAssertion = generators['1.0.0-assertion']({
