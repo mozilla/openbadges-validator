@@ -327,7 +327,10 @@ function fullValidateBadgeAssertion(assertion, callback) {
       const hostedAssertion = resources['assertion.verify.url'];
       const localAssertion = data.structures.assertion;
       if (!deepEqual(hostedAssertion, localAssertion))
-        return callback(makeError('verify-hosted'));
+        return callback(makeError('verify-hosted', 'Remote assertion must match local assertion', {
+          local: localAssertion,
+          hosted: hostedAssertion
+        }));
       return callback()
     }
   ], function (errs) {
@@ -385,6 +388,7 @@ function makeError(code, message, extra) {
   if (extra)
     err.extra = extra;
   Object.defineProperty(err, 'message', { enumerable: true });
+  Object.defineProperty(err, 'stack', { enumerable: false });
   return err;
 }
 
@@ -426,19 +430,7 @@ function getInternalClass(thing) {
   return Object.prototype.toString.call(thing);
 }
 
-const re = {
-  url: /(^(https?):\/\/[^\s\/$.?#].[^\s]*$)|(^\/\S+$)/,
-  absoluteUrl: /^https?:\/\/[^\s\/$.?#].[^\s]*$/,
-  email: /[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?/,
-  origin: /^(https?):\/\/[^\s\/$.?#].[^\s\/]*\/?$/,
-  version: /^v?\d+\.\d+(\.\d+)?$/,
-  date: /(^\d{4}-\d{2}-\d{2}$)|(^\d{1,10}$)/,
-  emailOrHash: /([a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-z0-9!#$%&'*+\/=?\^_`{|}~\-]+)*@(?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)|((sha1|sha256|sha512|md5)\$[a-fA-F0-9]+)/,
-  identityType: /^(email)$/i,
-  verifyType: /^(hosted)|(signed)$/i,
-  unixtime: /^1\d{9}$/,
-}
-
+const re = require('./lib/regex');
 const isUrl = regexToValidator(re.url, 'must be a URL');
 const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
 const isEmail = regexToValidator(re.email, 'must be an email address');
