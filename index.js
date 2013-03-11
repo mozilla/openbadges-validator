@@ -252,6 +252,10 @@ function validate(input, callback) {
   if (isObject(input)) {
     if (isOldAssertion(input))
       return fullValidateOldAssertion(input, callback)
+    if (!input.verify)
+      return callback(makeError('input', 'missing `verify` structure', { input: input }));
+    if (input.verify.type === 'signed')
+      return callback(makeError('input', 'when `verify.type` is "signed", a signature string is expected, not the assertion object', { input: input }));
     return fullValidateBadgeAssertion(input, callback);
   }
   if (typeof input === 'string') {
