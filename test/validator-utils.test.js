@@ -41,6 +41,7 @@ test('validator.absolutize: all absolute', function (t) {
 });
 
 test('validator.isSignedBadge', function (t) {
+  t.same(validator.isSignedBadge('http://sub.domain.org'), false);
   t.same(validator.isSignedBadge(sign('sup')), false);
   t.same(validator.isSignedBadge(sign({some: 'thing'})), false);
   t.same(validator.isSignedBadge(sign({recipient: 'yep'})), true);
