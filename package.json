@@ -1,6 +1,6 @@
 {
   "name": "openbadges-validator",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "openbadges validation tools",
   "main": "index.js",
   "directories": {
