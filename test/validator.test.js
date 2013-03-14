@@ -54,7 +54,7 @@ test('0.5.0 badges with errors', function (t) {
 
     required('badge.issuer.name');
     required('badge.issuer.contact');
-    required('badge.issuer.origin');
+    optional('badge.issuer.origin');
     optional('badge.issuer.org');
   }
   t.end();
