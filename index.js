@@ -126,7 +126,7 @@ function validateOldAssertion(assertion, prefix) {
     return objectIfKeys(errs);
 
   testRequired(issuer.name, isString, {field: p('badge.issuer.name')});
-  testRequired(issuer.contact, isEmail, {field: p('badge.issuer.contact')});
+  testOptional(issuer.contact, isEmail, {field: p('badge.issuer.contact')});
   testOptional(issuer.origin, isOrigin, {field: p('badge.issuer.origin')});
   testOptional(issuer.org, isString, {field: p('badge.issuer.org')});
 
