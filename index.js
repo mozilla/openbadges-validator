@@ -5,6 +5,7 @@ const request = require('request');
 const dataurl = require('dataurl');
 const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
+const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
 function isOldAssertion(assertion) {
@@ -256,7 +257,9 @@ function validate(input, callback) {
   if (typeof input === 'string') {
     if (isSignedBadge(input))
       return fullValidateSignedAssertion(input, callback);
-    return callback(makeError('input', 'not a valid signed badge', { input: input }));
+    if (isUrl(input))
+      return getUrlAndValidate(input, callback);
+    return callback(makeError('input', 'not a valid signed badge or url', { input: input }));
   }
   return callback(makeError('input', 'input must be a string or object', { input: input }));
 }
@@ -291,6 +294,17 @@ function checkRevoked(list, assertion) {
   if (!list) return;
   if ((msg = list[assertion.uid]))
     return makeError('verify-revoked', msg);
+}
+
+function getUrlAndValidate(url, callback) {
+  const options = {url: url, json: true, required: true};
+  return resources.getUrl(options, function(ex, result) {
+    if (result.error) {
+      result.error.field = 'assertion';
+      return callback(result.error);
+    }
+    return validate(result.body, callback);
+  });
 }
 
 function fullValidateOldAssertion(assertion, callback) {
@@ -429,7 +443,6 @@ function getInternalClass(thing) {
   return Object.prototype.toString.call(thing);
 }
 
-const re = require('./lib/regex');
 const isUrl = regexToValidator(re.url, 'must be a URL');
 const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
 const isEmail = regexToValidator(re.email, 'must be an email address');
