@@ -244,39 +244,36 @@ function getLinkedResources(structures, callback) {
 }
 
 function validateHosted(input, callback) {
-  if (isObject(input)) {
-    if (isOldAssertion(input))
-      return fullValidateOldAssertion(input, callback)
-    if (!input.verify)
-      return callback(makeError('input', 'missing `verify` structure', { input: input }));
-    if (input.verify.type === 'signed')
-      return callback(makeError('verify-type-mismatch', 'when `verify.type` is "signed", a signature string is expected, not the assertion object', { input: input }));
-    return fullValidateBadgeAssertion(input, callback);
-  }
-  return callback(makeError('input', 'input must be an object', { input: input }));
+  if (!isObject(input))
+    return callback(makeError('input', 'input must be an object', { input: input }));
+  if (isOldAssertion(input))
+    return fullValidateOldAssertion(input, callback)
+  if (!input.verify)
+    return callback(makeError('input', 'missing `verify` structure', { input: input }));
+  if (input.verify.type === 'signed')
+    return callback(makeError('verify-type-mismatch', 'when `verify.type` is "signed", a signature string is expected, not the assertion object', { input: input }));
+  return fullValidateBadgeAssertion(input, callback);
 }
 
 function validateHostedUrl(input, callback) {
-  if (isUrl(input)) {
-    const options = {url: input, json: true, required: true};
-    return resources.getUrl(options, function(ex, result) {
-      if (result.error) {
-        result.error.field = 'assertion';
-        return callback(result.error);
-      }
-      return validateHosted(result.body, callback);
-    });
-  }
-  return callback(makeError('input', 'not a valid url', { input: input }));
+  if (!isUrl(input))
+    return callback(makeError('input', 'not a valid url', { input: input }));
+  const options = {url: input, json: true, required: true};
+  return resources.getUrl(options, function(ex, result) {
+    if (result.error) {
+      result.error.field = 'assertion';
+      return callback(result.error);
+    }
+    return validateHosted(result.body, callback);
+  });
 }
 
 function validateSigned(input, callback) {
-  if (typeof input === 'string') {
-    if (isSignedBadge(input))
-      return fullValidateSignedAssertion(input, callback);
-    return callback(makeError('input', 'not a valid signed badge', { input: input }));
-  }
-  return callback(makeError('input', 'input must be a string', { input: input }));
+  if (typeof input !== 'string')
+    return callback(makeError('input', 'input must be a string', { input: input }));
+  if (isSignedBadge(input))
+    return fullValidateSignedAssertion(input, callback);
+  return callback(makeError('input', 'not a valid signed badge', { input: input }));
 }
 
 function validate(input, callback) {
