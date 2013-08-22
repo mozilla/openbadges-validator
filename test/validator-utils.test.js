@@ -16,7 +16,7 @@ test('validator.getAssertionGUID works w/ hosted assertions', function(t) {
   var url = "http://example.org/cat.json";
   validator.getAssertionGUID(url, function(err, guid) {
     t.equal(err, null);
-    t.same(guid, url);
+    t.same(guid, validator.sha256('hosted:' + url));
     t.end();
   });
 });
@@ -36,7 +36,7 @@ test('validator.getAssertionGUID works w/ signed assertions', function(t) {
   });
   validator.getAssertionGUID(signed, function(err, guid) {
     t.equal(err, null);
-    t.same(guid, 'signed-assertion:https://example.org/#abcd');
+    t.same(guid, validator.sha256('signed:abcd:https://example.org'));
     t.end();
   });
 });

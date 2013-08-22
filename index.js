@@ -1,4 +1,5 @@
 const urlParse = require('url').parse;
+const crypto = require('crypto');
 const jws = require('jws');
 const util = require('util');
 const async = require('async');
@@ -9,9 +10,15 @@ const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
+function sha256(str) {
+  var hash = crypto.createHash('sha256');
+  hash.update(str);
+  return hash.digest('hex');
+}
+
 function getAssertionGUID(urlOrSignature, callback) {
   if (isUrl(urlOrSignature))
-    return callback(null, urlOrSignature);
+    return callback(null, sha256('hosted:' + urlOrSignature));
   unpackJWS(urlOrSignature, function(err, payload) {
     if (err) return callback(err);
     var errors = validateAssertion(payload);
@@ -21,8 +28,8 @@ function getAssertionGUID(urlOrSignature, callback) {
       }));
     var urlParts = urlParse(payload.verify.url);
     var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
-    return callback(null, 'signed-assertion:' + issuerOrigin + '/#' +
-                          payload.uid);
+    var hash = sha256('signed:' + payload.uid + ':' + issuerOrigin);
+    return callback(null, hash);
   });
 }
 
@@ -576,6 +583,7 @@ function makeRequiredValidator(errors) {
 
 module.exports = validate;
 
+validate.sha256 = sha256;
 validate.isOldAssertion = isOldAssertion;
 validate.absolutize = absolutize;
 validate.assertion = validateAssertion;
