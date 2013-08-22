@@ -1,3 +1,4 @@
+const urlParse = require('url').parse;
 const jws = require('jws');
 const util = require('util');
 const async = require('async');
@@ -7,6 +8,23 @@ const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
+
+function getAssertionGUID(urlOrSignature, callback) {
+  if (isUrl(urlOrSignature))
+    return callback(null, urlOrSignature);
+  unpackJWS(urlOrSignature, function(err, payload) {
+    if (err) return callback(err);
+    var errors = validateAssertion(payload);
+    if (errors)
+      return callback(makeError('structure', 'invalid assertion structure', {
+        assertion: errors
+      }));
+    var urlParts = urlParse(payload.verify.url);
+    var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
+    return callback(null, 'signed-assertion:' + issuerOrigin + '/#' +
+                          payload.uid);
+  });
+}
 
 function isOldAssertion(assertion) {
   if (!assertion)
@@ -568,3 +586,4 @@ validate.getLinkedStructures = getLinkedStructures;
 validate.checkRevoked = checkRevoked;
 validate.unpackJWS = unpackJWS;
 validate.getLinkedResources = getLinkedResources;
+validate.getAssertionGUID = getAssertionGUID;
