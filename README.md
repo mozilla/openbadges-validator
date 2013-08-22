@@ -58,6 +58,12 @@ string:
 
 `signed:` **assertion UID** `:` **origin of assertion's public key**
 
+For example, if the signed assertion's public key is hosted at
+`https://example.org/public-key` and the assertion's UID is `abcd`, then
+the assertion's GUID will be the hex-encoded SHA256 hash of
+`signed:abcd:https://example.org`, or
+`61ae9c039ecc7d08cac6fea3ed6fa3d47463b34e3f2f3bbe86be33688b2f105a`.
+
 # License
 
 [MPL 2.0](http://www.mozilla.org/MPL/2.0/)
