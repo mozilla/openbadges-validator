@@ -73,7 +73,7 @@ test('validator.doesRecipientMatch works w/ 1.0.0 assertions', function(t) {
       version: '1.0.0',
       structure: {
         assertion: {
-          identity: identity
+          recipient: identity
         }
       }
     };

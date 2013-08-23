@@ -41,13 +41,13 @@ function doesRecipientMatch(info, identity) {
     else
       return assertion.recipient == identity;
   } else {
-    if (assertion.identity.type != "email")
+    if (assertion.recipient.type != "email")
       return false;
-    if (assertion.identity.hashed)
-      return doesHashedEmailMatch(assertion.identity.identity,
-                                  assertion.identity.salt,
+    if (assertion.recipient.hashed)
+      return doesHashedEmailMatch(assertion.recipient.identity,
+                                  assertion.recipient.salt,
                                   identity);
-    return assertion.identity.identity == identity;
+    return assertion.recipient.identity == identity;
   }
 }
 
