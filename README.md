@@ -8,7 +8,15 @@ $ npm install openbadges-validator
 
 # Usage
 
+The following documentation assumes the module has been imported
+like so:
+
+```javascript
+var validator = require('openbadges-validator');
+```
+
 ## validator(assertionOrSignature, callback)
+
 Validate a badge assertion and return an object containing info about
 the validated assertion.
 
