@@ -15,10 +15,12 @@ like so:
 var validator = require('openbadges-validator');
 ```
 
-## validator(assertionOrSignature, callback)
+## validator(thing, callback)
 
 Validate a badge assertion and return an object containing info about
 the validated assertion.
+
+`thing` should be an assertion, URL for a hosted assertion, or a signed badge.
 
 The callback is passed two arguments, `(err, info)`.
 
@@ -48,6 +50,13 @@ The callback is passed two arguments, `(err, info)`.
   - `issuer.url`
   - `issuer.image`
   - `issuer.revocationList`
+
+## validator.validateHosted(assertion, callback)
+## validator.validateHostedUrl(url, callback)
+## validator.validateSigned(signature, callback)
+
+The methods underlying `validator(thing, callback)` can also be called
+directly to validate a specific type of input. 
 
 ## validator.getAssertionGUID(urlOrSignature, callback)
 
