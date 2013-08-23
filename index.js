@@ -10,10 +10,45 @@ const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
-function sha256(str) {
-  var hash = crypto.createHash('sha256');
+var sha256 = hashedString.bind(null, 'sha256');
+
+function hashedString(algorithm, str) {
+  var hash = crypto.createHash(algorithm);
   hash.update(str);
   return hash.digest('hex');
+}
+
+function doesHashedEmailMatch(hashedEmail, salt, email) {
+  var parts = hashedEmail.split('$');
+
+  if (parts.length != 2) return false;
+
+  var algorithm = parts[0];
+  var hash = parts[1];
+
+  if (crypto.getHashes().indexOf(algorithm) == -1)
+    return false;
+
+  return hashedString(algorithm, email + salt) == hash;
+}
+
+function doesRecipientMatch(info, identity) {
+  var assertion = info.structure.assertion;
+  if (info.version == "0.5.0") {
+    if (typeof(assertion.salt) == "string")
+      return doesHashedEmailMatch(assertion.recipient, assertion.salt,
+                                  identity);
+    else
+      return assertion.recipient == identity;
+  } else {
+    if (assertion.identity.type != "email")
+      return false;
+    if (assertion.identity.hashed)
+      return doesHashedEmailMatch(assertion.identity.identity,
+                                  assertion.identity.salt,
+                                  identity);
+    return assertion.identity.identity == identity;
+  }
 }
 
 function getAssertionGUID(urlOrSignature, callback) {
@@ -614,3 +649,5 @@ validate.checkRevoked = checkRevoked;
 validate.unpackJWS = unpackJWS;
 validate.getLinkedResources = getLinkedResources;
 validate.getAssertionGUID = getAssertionGUID;
+validate.doesRecipientMatch = doesRecipientMatch;
+validate.doesHashedEmailMatch = doesHashedEmailMatch;

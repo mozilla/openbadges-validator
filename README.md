@@ -72,13 +72,13 @@ the assertion's GUID will be the hex-encoded SHA256 hash of
 `signed:abcd:https://example.org`, or
 `61ae9c039ecc7d08cac6fea3ed6fa3d47463b34e3f2f3bbe86be33688b2f105a`.
 
-## validator.doesRecipientMatch(assertion, identity)
+## validator.doesRecipientMatch(info, identity)
 
-Returns a boolean indicating whether or not the given assertion has
+Returns a boolean indicating whether or not an assertion has
 been issued to a particular recipient.
 
-`assertion` is a fully valid assertion object, as provided by
-the `validator` function's `info.structure.assertion` return value.
+`info` is an object containing properties about the assertion, as returned
+by the `validator` function.
 
 `identity` is an email address. (In the future, identities other than
 email addresses may be supported.)
