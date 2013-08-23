@@ -49,10 +49,10 @@ The callback is passed two arguments, `(err, info)`.
   - `issuer.image`
   - `issuer.revocationList`
 
-## validator.getAssertionGUID(assertionOrSignature, callback)
+## validator.getAssertionGUID(urlOrSignature, callback)
 
-Given a badge assertion, return an alphanumeric string that uniquely
-identifies the badge.
+Given either a hosted assertion URL or a signed assertion,
+return an alphanumeric string that uniquely identifies the badge.
 
 The callback is passed two arguments, `(err, guid)`.
 
