@@ -33,7 +33,7 @@ function doesHashedEmailMatch(hashedEmail, salt, email) {
 }
 
 function doesRecipientMatch(info, identity) {
-  var assertion = info.structure.assertion;
+  var assertion = info.structures.assertion;
   if (info.version == "0.5.0") {
     if (typeof(assertion.salt) == "string")
       return doesHashedEmailMatch(assertion.recipient, assertion.salt,

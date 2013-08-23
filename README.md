@@ -30,7 +30,7 @@ The callback is passed two arguments, `(err, info)`.
 - `signature`: JSON Web Signature representation of the assertion. This
   will only be present if the assertion came in as a JWS.
 
-- `structure`
+- `structures`
   - `assertion`: The assertion data
   - `badge`: Badge data related to assertion.
   - `issuer`: Issuer data related to badge.

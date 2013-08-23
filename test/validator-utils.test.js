@@ -40,7 +40,7 @@ test('validator.doesRecipientMatch works w/ 0.5.0 assertions', function(t) {
   function mkInfo(assertion) {
     return {
       version: '0.5.0',
-      structure: {
+      structures: {
         assertion: assertion
       }
     };
@@ -71,7 +71,7 @@ test('validator.doesRecipientMatch works w/ 1.0.0 assertions', function(t) {
   function mkInfo(identity) {
     return {
       version: '1.0.0',
-      structure: {
+      structures: {
         assertion: {
           recipient: identity
         }
