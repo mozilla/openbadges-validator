@@ -214,6 +214,37 @@ test('validate by url: assertion unreachable', function (t) {
   });
 });
 
+test('validateHosted: string arg', function(t) {
+  const signature = jws.sign({
+    header: { alg: 'rs256' },
+    payload: { dummy: 'assertion' },
+    privateKey: keys.private
+  });
+  validator.validateHosted(signature, function (err, data) {
+    t.ok(err, 'should have error');
+    t.same(err.code, 'input');
+    t.end();
+  });
+});
+
+test('validateHostedUrl: object arg', function(t) {
+  const assertion = generators['1.0.0-assertion']();
+  validator.validateHostedUrl(assertion, function (err, data) {
+    t.ok(err, 'should have error');
+    t.same(err.code, 'input');
+    t.end();
+  });
+});
+
+test('validateSigned: object arg', function(t) {
+  const assertion = generators['1.0.0-assertion']();
+  validator.validateSigned(assertion, function (err, data) {
+    t.ok(err, 'should have error');
+    t.same(err.code, 'input');
+    t.end();
+  });
+});
+
 function forEach(obj, fn) {
   Object.keys(obj).forEach(function (key) {
     return fn(key, obj[key]);
