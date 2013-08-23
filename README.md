@@ -41,6 +41,29 @@ The callback is passed two arguments, `(err, info)`.
   - `issuer.image`
   - `issuer.revocationList`
 
+## validator.getAssertionGUID(assertionOrSignature, callback)
+
+Given a badge assertion, return an alphanumeric string that uniquely
+identifies the badge.
+
+The callback is passed two arguments, `(err, guid)`.
+
+If the assertion is hosted, `guid` will be the SHA256 hash of the following 
+string:
+
+`hosted:` **assertion URL**
+
+If the assertion is signed, `guid` will be the SHA256 hash of the following
+string:
+
+`signed:` **assertion UID** `:` **origin of assertion's public key**
+
+For example, if the signed assertion's public key is hosted at
+`https://example.org/public-key` and the assertion's UID is `abcd`, then
+the assertion's GUID will be the hex-encoded SHA256 hash of
+`signed:abcd:https://example.org`, or
+`61ae9c039ecc7d08cac6fea3ed6fa3d47463b34e3f2f3bbe86be33688b2f105a`.
+
 # License
 
 [MPL 2.0](http://www.mozilla.org/MPL/2.0/)

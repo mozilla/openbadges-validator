@@ -1,3 +1,5 @@
+const urlParse = require('url').parse;
+const crypto = require('crypto');
 const jws = require('jws');
 const util = require('util');
 const async = require('async');
@@ -7,6 +9,29 @@ const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
+
+function sha256(str) {
+  var hash = crypto.createHash('sha256');
+  hash.update(str);
+  return hash.digest('hex');
+}
+
+function getAssertionGUID(urlOrSignature, callback) {
+  if (isUrl(urlOrSignature))
+    return callback(null, sha256('hosted:' + urlOrSignature));
+  unpackJWS(urlOrSignature, function(err, payload) {
+    if (err) return callback(err);
+    var errors = validateAssertion(payload);
+    if (errors)
+      return callback(makeError('structure', 'invalid assertion structure', {
+        assertion: errors
+      }));
+    var urlParts = urlParse(payload.verify.url);
+    var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
+    var hash = sha256('signed:' + payload.uid + ':' + issuerOrigin);
+    return callback(null, hash);
+  });
+}
 
 function isOldAssertion(assertion) {
   if (!assertion)
@@ -574,6 +599,7 @@ function makeRequiredValidator(errors) {
 
 module.exports = validate;
 
+validate.sha256 = sha256;
 validate.validateHosted = validateHosted;
 validate.validateHostedUrl = validateHostedUrl;
 validate.validateSigned = validateSigned;
@@ -587,3 +613,4 @@ validate.getLinkedStructures = getLinkedStructures;
 validate.checkRevoked = checkRevoked;
 validate.unpackJWS = unpackJWS;
 validate.getLinkedResources = getLinkedResources;
+validate.getAssertionGUID = getAssertionGUID;
