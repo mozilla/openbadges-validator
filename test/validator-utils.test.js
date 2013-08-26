@@ -12,6 +12,102 @@ function sign(thing) {
   });
 }
 
+test('validator.sha256 works', function(t) {
+  t.same(validator.sha256('foo@example.orglol'),
+         '764c2d5c44777ed2de8baf90bf422f859aed6e917071f8579fc9ae287aebf489');
+  t.end();
+});
+
+test('validator.doesHashedEmailMatch works', function(t) {
+  t.equal(validator.doesHashedEmailMatch(
+    'sha256$' + validator.sha256('foo@example.org' + 'lol'),
+    'lol',
+    'foo@example.org'
+  ), true, "returns true");
+  t.equal(validator.doesHashedEmailMatch(
+    'sha256$' + validator.sha256('foo@example.org' + 'lol'),
+    'lol',
+    'bar@example.org'
+  ), false, "returns false when hashes don't match");
+  t.end();
+});
+
+test('validator.doesRecipientMatch works w/ 0.5.0 assertions', function(t) {
+  function mkInfo(assertion) {
+    return {
+      version: '0.5.0',
+      structures: {
+        assertion: assertion
+      }
+    };
+  }
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    salt: 'lol',
+    recipient: 'sha256$' + validator.sha256('foo@example.org' + 'lol')
+  }), 'foo@example.org'), true, "works w/ matching hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    salt: 'lol',
+    recipient: 'sha256$' + validator.sha256('foo@example.org' + 'lol')
+  }), 'bar@example.org'), false, "works w/ unmatching hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    recipient: 'foo@example.org'
+  }), 'foo@example.org'), true, "works w/ matching unhashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    recipient: 'foo@example.org'
+  }), 'bar@example.org'), false, "works w/ unmatching unhashed identities");
+
+  t.end();
+});
+
+test('validator.doesRecipientMatch works w/ 1.0.0 assertions', function(t) {
+  function mkInfo(identity) {
+    return {
+      version: '1.0.0',
+      structures: {
+        assertion: {
+          recipient: identity
+        }
+      }
+    };
+  }
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    type: 'lolcat'
+  }), 'foo@example.org'), false, "works w/ bad identity types");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    type: 'email',
+    hashed: true,
+    salt: 'lol',
+    identity: 'sha256$' + validator.sha256('foo@example.org' + 'lol')
+  }), 'foo@example.org'), true, "works w/ matching hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    type: 'email',
+    hashed: true,
+    salt: 'lol',
+    identity: 'sha256$' + validator.sha256('foo@example.org' + 'lol')
+  }), 'bar@example.org'), false, "works w/ unmatching hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    type: 'email',
+    hashed: false,
+    identity: 'foo@example.org'
+  }), 'foo@example.org'), true, "works w/ matching unhashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    type: 'email',
+    hashed: false,
+    identity: 'foo@example.org'
+  }), 'bar@example.org'), false, "works w/ unmatching unhashed identities");
+
+  t.end();
+});
+
 test('validator.getAssertionGUID works w/ hosted assertions', function(t) {
   var url = "http://example.org/cat.json";
   validator.getAssertionGUID(url, function(err, guid) {
@@ -93,5 +189,13 @@ test('validator.isSignedBadge', function (t) {
   t.same(validator.isSignedBadge(sign('sup')), false);
   t.same(validator.isSignedBadge(sign({some: 'thing'})), false);
   t.same(validator.isSignedBadge(sign({recipient: 'yep'})), true);
+  t.end();
+});
+
+test('VALID_HASHES are recognized by node crypto', function (t) {
+  validator.VALID_HASHES.forEach(function(algorithm) {
+    t.ok(require('crypto').createHash(algorithm),
+         algorithm + ' algorithm is recognized by node crypto');
+  });
   t.end();
 });
