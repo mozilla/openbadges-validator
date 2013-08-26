@@ -29,6 +29,12 @@ The callback is passed two arguments, `(err, info)`.
 - `version`: Version of the specification that the analyzed assertion
   corresponds to. Currently this will be either "1.0.0" or "0.5.0".
 
+- `guid`: The GUID of the assertion, as per the algorithm described in
+  the documentation for `getAssertionGUID`. If the assertion passed-in
+  was the literal object for a 0.5.0-style assertion, this will be
+  `null`, since there is no way to know what the URL of the assertion
+  is.
+
 - `signature`: JSON Web Signature representation of the assertion. This
   will only be present if the assertion came in as a JWS.
 
