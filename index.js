@@ -10,10 +10,41 @@ const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
-function sha256(str) {
-  var hash = crypto.createHash('sha256');
+const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
+
+var sha256 = hashedString.bind(null, 'sha256');
+
+function hashedString(algorithm, str) {
+  var hash = crypto.createHash(algorithm);
   hash.update(str);
   return hash.digest('hex');
+}
+
+function doesHashedEmailMatch(hashedEmail, salt, email) {
+  var match = hashedEmail.match(re.hash);
+  var algorithm = match[1];
+  var hash = match[2];
+
+  return hashedString(algorithm, email + salt) == hash;
+}
+
+function doesRecipientMatch(info, identity) {
+  var assertion = info.structures.assertion;
+  if (info.version == "0.5.0") {
+    if (typeof(assertion.salt) == "string")
+      return doesHashedEmailMatch(assertion.recipient, assertion.salt,
+                                  identity);
+    else
+      return assertion.recipient == identity;
+  } else {
+    if (assertion.recipient.type != "email")
+      return false;
+    if (assertion.recipient.hashed)
+      return doesHashedEmailMatch(assertion.recipient.identity,
+                                  assertion.recipient.salt,
+                                  identity);
+    return assertion.recipient.identity == identity;
+  }
 }
 
 function hostedAssertionGUID(urlOrAssertion) {
@@ -364,7 +395,7 @@ function fullValidateOldAssertion(assertion, callback, originalUrl) {
   getLinkedResources(assertion, function (err, resources) {
     if (err)
       return callback(err);
-    return callback(null, {
+    return validateOldInterdependentFields({
       version: '0.5.0',
       guid: originalUrl ? hostedAssertionGUID(originalUrl) : null,
       structures: {
@@ -373,7 +404,7 @@ function fullValidateOldAssertion(assertion, callback, originalUrl) {
         issuer: assertion.badge.issuer
       },
       resources: resources
-    });
+    }, callback);
   });
 }
 
@@ -395,8 +426,9 @@ function fullValidateBadgeAssertion(assertion, callback) {
           local: localAssertion,
           hosted: hostedAssertion
         }));
-      return callback()
-    }
+      return callback(null, data)
+    },
+    validateInterdependentFields
   ], function (errs) {
     callback(errs, data);
   });
@@ -426,8 +458,9 @@ function fullValidateSignedAssertion(signature, callback) {
       const error = checkRevoked(revocationList, assertion);
       if (error)
         return callback(error);
-      return callback();
-    }
+      return callback(null, data);
+    },
+    validateInterdependentFields
   ],function (errs) {
     return callback(errs, data);
   })
@@ -501,10 +534,28 @@ const isEmail = regexToValidator(re.email, 'must be an email address');
 const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, hostname and optional port)');
 const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
 const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
-const isEmailOrHash = regexToValidator(re.emailOrHash, 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")');
 const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
 const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
+const isEmailOrHash = makeValidator({
+  message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
+  fn: function isEmailOrHash(thing) {
+    if (typeof(thing) != 'string') return false;
+    return (isEmail(thing) || isHash(thing));
+  }
+});
+const isHash = makeValidator({
+  message: 'must be a self-identifying hash string ' +
+           '(e.g., "sha256$abcdef123456789") with a supported hash ' +
+           'algorithm (' + VALID_HASHES.join(',') + ')',
+  fn: function isHash(thing) {
+    if (typeof(thing) != 'string') return false;
+    var match = thing.match(re.hash);
+    if (!match) return false;
+    if (VALID_HASHES.indexOf(match[1]) == -1) return false;
+    return true;
+  }
+});
 const isObject = makeValidator({
   message: 'must be an object',
   fn: function isObject(thing) {
@@ -608,6 +659,36 @@ function makeRequiredValidator(errors) {
   }
 }
 
+function validateOldInterdependentFields(info, cb) {
+  var assertion = info.structures.assertion;
+
+  const errs = {};
+  const testRequired = makeRequiredValidator(errs);
+
+  testRequired(assertion.recipient,
+               assertion.salt ? isHash : isEmail, {field: 'recipient'});
+
+  cb(objectIfKeys(errs), info);
+}
+
+function validateInterdependentFields(info, cb) {
+  var recipient = info.structures.assertion.recipient;
+
+  const errs = {};
+  const testRequired = makeRequiredValidator(errs);
+
+  if (recipient.hashed) {
+    testRequired(recipient.identity, isHash, {field: 'recipient.identity'});
+    testRequired(recipient.salt, isString, {field: 'recipient.salt'});
+  } else {
+    if (recipient.type == "email") {
+      testRequired(recipient.identity, isEmail, {field: 'recipient.identity'});
+    }
+  }
+
+  cb(objectIfKeys(errs), info);
+}
+
 module.exports = validate;
 
 validate.sha256 = sha256;
@@ -625,3 +706,8 @@ validate.checkRevoked = checkRevoked;
 validate.unpackJWS = unpackJWS;
 validate.getLinkedResources = getLinkedResources;
 validate.getAssertionGUID = getAssertionGUID;
+validate.doesRecipientMatch = doesRecipientMatch;
+validate.doesHashedEmailMatch = doesHashedEmailMatch;
+validate.VALID_HASHES = VALID_HASHES;
+validate.validateOldInterdependentFields = validateOldInterdependentFields;
+validate.validateInterdependentFields = validateInterdependentFields;
