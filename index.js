@@ -525,10 +525,17 @@ const isEmail = regexToValidator(re.email, 'must be an email address');
 const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, hostname and optional port)');
 const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
 const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
-const isEmailOrHash = regexToValidator(re.emailOrHash, 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")');
 const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
 const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
+const isEmailOrHash = makeValidator({
+  message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
+  fn: function isEmailOrHash(thing) {
+    if (typeof(thing) != 'string') return false;
+    if (isEmail(thing)) return true;
+    return (re.hash.test(thing))
+  }
+});
 const isObject = makeValidator({
   message: 'must be an object',
   fn: function isObject(thing) {
