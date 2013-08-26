@@ -195,3 +195,11 @@ test('validator.isSignedBadge', function (t) {
   t.same(validator.isSignedBadge(sign({recipient: 'yep'})), true);
   t.end();
 });
+
+test('VALID_HASHES are recognized by node crypto', function (t) {
+  validator.VALID_HASHES.forEach(function(algorithm) {
+    t.ok(require('crypto').createHash(algorithm),
+         algorithm + ' algorithm is recognized by node crypto');
+  });
+  t.end();
+});

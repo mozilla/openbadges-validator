@@ -10,6 +10,8 @@ const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
+const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
+
 var sha256 = hashedString.bind(null, 'sha256');
 
 function hashedString(algorithm, str) {
@@ -26,7 +28,7 @@ function doesHashedEmailMatch(hashedEmail, salt, email) {
   var algorithm = parts[0];
   var hash = parts[1];
 
-  if (crypto.getHashes().indexOf(algorithm) == -1)
+  if (VALID_HASHES.indexOf(algorithm) == -1)
     return false;
 
   return hashedString(algorithm, email + salt) == hash;
@@ -532,8 +534,19 @@ const isEmailOrHash = makeValidator({
   message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
   fn: function isEmailOrHash(thing) {
     if (typeof(thing) != 'string') return false;
-    if (isEmail(thing)) return true;
-    return (re.hash.test(thing))
+    return (isEmail(thing) || isHash(thing));
+  }
+});
+const isHash = makeValidator({
+  message: 'must be a self-identifying hash string ' +
+           '(e.g., "sha256$abcdef123456789") with a supported hash ' +
+           'algorithm (' + VALID_HASHES.join(',') + ')',
+  fn: function isHash(thing) {
+    if (typeof(thing) != 'string') return false;
+    var match = thing.match(re.hash);
+    if (!match) return false;
+    if (VALID_HASHES.indexOf(match[1]) == -1) return false;
+    return true;
   }
 });
 const isObject = makeValidator({
@@ -658,3 +671,4 @@ validate.getLinkedResources = getLinkedResources;
 validate.getAssertionGUID = getAssertionGUID;
 validate.doesRecipientMatch = doesRecipientMatch;
 validate.doesHashedEmailMatch = doesHashedEmailMatch;
+validate.VALID_HASHES = VALID_HASHES;
