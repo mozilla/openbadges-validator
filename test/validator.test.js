@@ -76,10 +76,6 @@ test('1.0.0-assertion: some errors', function (t) {
     required('recipient.hashed');
     optional('recipient.salt');
 
-    // #TODO: write interdependence tests: when recipient.hashed is `true`,
-    // identity should be a hash. When recipient.hashed is `false`, should
-    // match the format of `recipient.type`.
-
     object('verify');
     required('verify.type');
     required('verify.url');
@@ -217,6 +213,89 @@ function testObjectField(options, field) {
   testRequired(options, field);
   testInvalid(options, field);
 }
+test('0.5.0: validateOldInterdependentFields()', function(t) {
+  t.plan(5);
+
+  validator.validateOldInterdependentFields({structures: {assertion: {
+    salt: 'lol',
+    recipient: 'sha256$abcd'
+  }}}, function(err, info) {
+    t.notOk(err, 'should have no errors');
+    t.ok(info.structures, 'should pass through info');
+  });
+
+  validator.validateOldInterdependentFields({structures: {assertion: {
+    recipient: 'foo@bar.org'
+  }}}, function(err) {
+    t.notOk(err, 'should have no errors');
+  });
+
+  validator.validateOldInterdependentFields({structures: {assertion: {
+    recipient: 'sha256$abcd'
+  }}}, function(err) {
+    t.equal(err.recipient.message, 'must be an email address');
+  });
+
+  validator.validateOldInterdependentFields({structures: {assertion: {
+    salt: 'lol',
+    recipient: 'foo@bar.org'
+  }}}, function(err) {
+    t.ok(err.recipient.message.match(/must be a self-identifying hash/));
+  });
+
+  t.end();
+});
+test('1.0.0: validateInterdependentFields()', function(t) {
+  var validateInterdependentFields = validator.validateInterdependentFields;
+
+  t.plan(6);
+  
+  validateInterdependentFields({structures: {assertion: {recipient: {
+    hashed: false,
+    type: 'email',
+    identity: 'foo@bar.org'
+  }}}}, function(err, info) {
+    t.notOk(err, 'should have no errors');
+    t.ok(info.structures, 'should pass through info');
+  });
+
+  validateInterdependentFields({structures: {assertion: {recipient: {
+    hashed: true,
+    type: 'email',
+    salt: 'lol',
+    identity: 'sha256$abcd'
+  }}}}, function(err, info) {
+    t.notOk(err, 'should have no errors');
+  });
+
+  validateInterdependentFields({structures: {assertion: {recipient: {
+    hashed: true,
+    type: 'email',
+    identity: 'sha256$abcd'
+  }}}}, function(err, info) {
+    t.equal(err['recipient.salt'].message, 'must be a string');
+  });
+
+  validateInterdependentFields({structures: {assertion: {recipient: {
+    hashed: true,
+    type: 'email',
+    salt: 'lol',
+    identity: 'foo@bar.org'
+  }}}}, function(err, info) {
+    t.ok(err['recipient.identity'].message
+      .match(/must be a self-identifying hash/));
+  });
+
+  validateInterdependentFields({structures: {assertion: {recipient: {
+    hashed: false,
+    type: 'email',
+    identity: 'sha256$abcd'
+  }}}}, function(err, info) {
+    t.equal(err['recipient.identity'].message, 'must be an email address');
+  });
+
+  t.end();
+});
 
 /** utility methods */
 

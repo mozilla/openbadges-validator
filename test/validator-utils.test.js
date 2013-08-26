@@ -24,10 +24,6 @@ test('validator.doesHashedEmailMatch works', function(t) {
     'lol',
     'foo@example.org'
   ), true, "returns true");
-  t.equal(validator.doesHashedEmailMatch('lol$bop', 'a', 'b'), false,
-          "returns false when hash algorithm is invalid");
-  t.equal(validator.doesHashedEmailMatch('lol', 'a', 'b'), false,
-          "returns false when hashed email is malformed");
   t.equal(validator.doesHashedEmailMatch(
     'sha256$' + validator.sha256('foo@example.org' + 'lol'),
     'lol',

@@ -21,15 +21,9 @@ function hashedString(algorithm, str) {
 }
 
 function doesHashedEmailMatch(hashedEmail, salt, email) {
-  var parts = hashedEmail.split('$');
-
-  if (parts.length != 2) return false;
-
-  var algorithm = parts[0];
-  var hash = parts[1];
-
-  if (VALID_HASHES.indexOf(algorithm) == -1)
-    return false;
+  var match = hashedEmail.match(re.hash);
+  var algorithm = match[1];
+  var hash = match[2];
 
   return hashedString(algorithm, email + salt) == hash;
 }
@@ -392,7 +386,7 @@ function fullValidateOldAssertion(assertion, callback) {
   getLinkedResources(assertion, function (err, resources) {
     if (err)
       return callback(err);
-    return callback(null, {
+    return validateOldInterdependentFields({
       version: '0.5.0',
       structures: {
         assertion: assertion,
@@ -400,7 +394,7 @@ function fullValidateOldAssertion(assertion, callback) {
         issuer: assertion.badge.issuer
       },
       resources: resources
-    });
+    }, callback);
   });
 }
 
@@ -422,8 +416,9 @@ function fullValidateBadgeAssertion(assertion, callback) {
           local: localAssertion,
           hosted: hostedAssertion
         }));
-      return callback()
-    }
+      return callback(null, data)
+    },
+    validateInterdependentFields
   ], function (errs) {
     callback(errs, data);
   });
@@ -452,8 +447,9 @@ function fullValidateSignedAssertion(signature, callback) {
       const error = checkRevoked(revocationList, assertion);
       if (error)
         return callback(error);
-      return callback();
-    }
+      return callback(null, data);
+    },
+    validateInterdependentFields
   ],function (errs) {
     return callback(errs, data);
   })
@@ -652,6 +648,36 @@ function makeRequiredValidator(errors) {
   }
 }
 
+function validateOldInterdependentFields(info, cb) {
+  var assertion = info.structures.assertion;
+
+  const errs = {};
+  const testRequired = makeRequiredValidator(errs);
+
+  testRequired(assertion.recipient,
+               assertion.salt ? isHash : isEmail, {field: 'recipient'});
+
+  cb(objectIfKeys(errs), info);
+}
+
+function validateInterdependentFields(info, cb) {
+  var recipient = info.structures.assertion.recipient;
+
+  const errs = {};
+  const testRequired = makeRequiredValidator(errs);
+
+  if (recipient.hashed) {
+    testRequired(recipient.identity, isHash, {field: 'recipient.identity'});
+    testRequired(recipient.salt, isString, {field: 'recipient.salt'});
+  } else {
+    if (recipient.type == "email") {
+      testRequired(recipient.identity, isEmail, {field: 'recipient.identity'});
+    }
+  }
+
+  cb(objectIfKeys(errs), info);
+}
+
 module.exports = validate;
 
 validate.sha256 = sha256;
@@ -672,3 +698,5 @@ validate.getAssertionGUID = getAssertionGUID;
 validate.doesRecipientMatch = doesRecipientMatch;
 validate.doesHashedEmailMatch = doesHashedEmailMatch;
 validate.VALID_HASHES = VALID_HASHES;
+validate.validateOldInterdependentFields = validateOldInterdependentFields;
+validate.validateInterdependentFields = validateInterdependentFields;
