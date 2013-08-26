@@ -47,9 +47,21 @@ function doesRecipientMatch(info, identity) {
   }
 }
 
+function hostedAssertionGUID(urlOrAssertion) {
+  if (typeof(urlOrAssertion) != "string")
+    urlOrAssertion = urlOrAssertion.verify.url;
+  return sha256('hosted:' + urlOrAssertion);
+}
+
+function signedAssertionGUID(assertion) {
+  var urlParts = urlParse(assertion.verify.url);
+  var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
+  return sha256('signed:' + assertion.uid + ':' + issuerOrigin);
+}
+
 function getAssertionGUID(urlOrSignature, callback) {
   if (isUrl(urlOrSignature))
-    return callback(null, sha256('hosted:' + urlOrSignature));
+    return callback(null, hostedAssertionGUID(urlOrSignature));
   unpackJWS(urlOrSignature, function(err, payload) {
     if (err) return callback(err);
     var errors = validateAssertion(payload);
@@ -57,10 +69,7 @@ function getAssertionGUID(urlOrSignature, callback) {
       return callback(makeError('structure', 'invalid assertion structure', {
         assertion: errors
       }));
-    var urlParts = urlParse(payload.verify.url);
-    var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
-    var hash = sha256('signed:' + payload.uid + ':' + issuerOrigin);
-    return callback(null, hash);
+    return callback(null, signedAssertionGUID(payload));
   });
 }
 
@@ -299,11 +308,11 @@ function getLinkedResources(structures, callback) {
   }, hollaback);
 }
 
-function validateHosted(input, callback) {
+function validateHosted(input, callback, originalUrl) {
   if (!isObject(input))
     return callback(makeError('input', 'input must be an object', { input: input }));
   if (isOldAssertion(input))
-    return fullValidateOldAssertion(input, callback)
+    return fullValidateOldAssertion(input, callback, originalUrl)
   if (!input.verify)
     return callback(makeError('input', 'missing `verify` structure', { input: input }));
   if (input.verify.type === 'signed')
@@ -320,7 +329,7 @@ function validateHostedUrl(input, callback) {
       result.error.field = 'assertion';
       return callback(result.error);
     }
-    return validateHosted(result.body, callback);
+    return validateHosted(result.body, callback, input);
   });
 }
 
@@ -379,7 +388,7 @@ function checkRevoked(list, assertion) {
     return makeError('verify-revoked', msg);
 }
 
-function fullValidateOldAssertion(assertion, callback) {
+function fullValidateOldAssertion(assertion, callback, originalUrl) {
   const structuralErrors = validateAssertion(assertion);
   if (structuralErrors)
     return callback(makeError('structure', structuralErrors));
@@ -388,6 +397,7 @@ function fullValidateOldAssertion(assertion, callback) {
       return callback(err);
     return validateOldInterdependentFields({
       version: '0.5.0',
+      guid: originalUrl ? hostedAssertionGUID(originalUrl) : null,
       structures: {
         assertion: assertion,
         badge: assertion.badge,
@@ -399,7 +409,7 @@ function fullValidateOldAssertion(assertion, callback) {
 }
 
 function fullValidateBadgeAssertion(assertion, callback) {
-  const data = {version: '1.0.0'};
+  const data = {version: '1.0.0', guid: hostedAssertionGUID(assertion)};
   async.waterfall([
     getLinkedStructures.bind(null, assertion),
     validateStructures,
@@ -431,6 +441,7 @@ function fullValidateSignedAssertion(signature, callback) {
     getLinkedStructures,
     validateStructures,
     function getResources(structures, callback) {
+      data.guid = signedAssertionGUID(structures.assertion);
       data.structures = structures;
       return getLinkedResources(structures, callback);
     },

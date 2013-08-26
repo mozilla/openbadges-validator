@@ -22,7 +22,7 @@
     "node": "~0.10.0"
   },
   "scripts": {
-    "test": "make"
+    "test": "node node_modules/tap/bin/tap test/*.test.js"
   },
   "repository": {
     "type": "git",

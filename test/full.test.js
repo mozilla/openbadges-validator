@@ -35,6 +35,7 @@ test('validate, signed', function (t) {
   });
   validator(signature, function (err, data) {
     t.notOk(err, 'no errors');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.same(data.signature, signature);
     t.same(str(data.resources['badge.image']), 'badge-image');
     t.end();
@@ -90,6 +91,7 @@ test('validate, new hosted', function (t) {
     .get('/revocation-list').reply(200, '{"found":true}')
   validator(assertion, function (err, data) {
     t.notOk(err, 'should have no errors');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.end();
   });
 });
@@ -112,6 +114,7 @@ test('validate, new hosted by url', function (t) {
     .get('/revocation-list').reply(200, '{"found":true}')
   validator(ORIGIN + '/assertion', function (err, data) {
     t.notOk(err, 'should have no errors');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.end();
   });
 });
@@ -161,6 +164,7 @@ test('validate, old style', function (t) {
     t.same(data.version, '0.5.0');
     t.same(data.structures.assertion.badge, data.structures.badge);
     t.same(data.structures.badge.criteria, originalCriteria);
+    t.equal(data.guid, null);
     t.end();
   });
 });
@@ -179,6 +183,7 @@ test('validate, old style by url', function (t) {
     t.same(data.version, '0.5.0');
     t.same(data.structures.assertion.badge, data.structures.badge);
     t.same(data.structures.badge.criteria, originalCriteria);
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.end();
   });
 });
