@@ -100,7 +100,9 @@ email addresses may be supported.)
 
 # Tests
 
-All tests can be run with `npm test`. A code coverag report can be generated
+All tests can be run with `npm test`.
+
+If you have `node-cover` installed, a code coverage report can be generated
 with `make test-cov` and viewed in `cover_html/index.html`.
 
 # License
