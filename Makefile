@@ -2,7 +2,7 @@ tests := $(shell ls test/*.test.js)
 cover-each = $(notdir $(tests))
 
 test-cov: $(cover-each)
-	sleep 1 # combine doesn't seem to get all the runs without this
+	@sleep 1 # combine doesn't seem to get all the runs without this
 	@cover combine
 	@cover report html
 
