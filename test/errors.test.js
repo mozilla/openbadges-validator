@@ -7,6 +7,7 @@ const jws = require('jws');
 const keys = require('./test-keys');
 const util = require('util');
 
+var UNREACHABLE = 'http://nope.example.org/'; // not sure how to do this with nock
 var ORIGIN = 'https://example.org';
 var httpScope = function() {
   nock.cleanAll();
@@ -115,17 +116,15 @@ errorTest('structure', {
 });
 
 errorTest('resources', {
-  'getLinkedResources: 0.5 assertion with unreachable badge image': function(cb) {
+  'getLinkedResources: 0.5 assertion with non-existant badge image': function(cb) {
     httpScope()
-      .get('/badge-image').reply(404);
-    const assertion = generators['0.5.0']({
-      'badge.image': '/badge-image'
-    });
+      .get('/image').reply(404);
+    const assertion = generators['0.5.0']();
     validator.getLinkedResources(assertion, cb.with(function(err, data, t){
       t.ok(err.extra['badge.image'], 'correct extra');
     }));
   },
-  'getLinkedResources: 1.0 assertion with unreachable badge image': function(cb) {
+  'getLinkedResources: 1.0 assertion with non-existant badge image': function(cb) {
     const assertion = generators['1.0.0-assertion']();
     const badge = generators['1.0.0-badge']();
     const issuer = generators['1.0.0-issuer']();
@@ -146,7 +145,7 @@ errorTest('resources', {
       }));
     });
   },
-  'getLinkedResources: 1.0 assertion with unreachable assertion image': function(cb) {
+  'getLinkedResources: 1.0 assertion with non-existant assertion image': function(cb) {
     const assertion = generators['1.0.0-assertion']();
     const badge = generators['1.0.0-badge']();
     const issuer = generators['1.0.0-issuer']();
@@ -167,7 +166,7 @@ errorTest('resources', {
       }));
     });
   },
-  'getLinkedResources: 1.0 assertion with unreachable assertion verify url': function(cb) {
+  'getLinkedResources: 1.0 assertion with non-existant assertion verify url': function(cb) {
     const assertion = generators['1.0.0-assertion']();
     const badge = generators['1.0.0-badge']();
     const issuer = generators['1.0.0-issuer']();
@@ -188,7 +187,7 @@ errorTest('resources', {
       }));
     });
   },
-  'getLinkedResources: 1.0 assertion with unreachable issuer image': function(cb) {
+  'getLinkedResources: 1.0 assertion with non-existant issuer image': function(cb) {
     const assertion = generators['1.0.0-assertion']();
     const badge = generators['1.0.0-badge']();
     const issuer = generators['1.0.0-issuer']();
@@ -209,7 +208,7 @@ errorTest('resources', {
       }));
     });
   },
-  'getLinkedResources: 1.0 assertion with unreachable issuer revocation list': function(cb) {
+  'getLinkedResources: 1.0 assertion with non-existant issuer revocation list': function(cb) {
     const assertion = generators['1.0.0-assertion']();
     const badge = generators['1.0.0-badge']();
     const issuer = generators['1.0.0-issuer']();
@@ -229,6 +228,27 @@ errorTest('resources', {
         t.ok(err.extra['issuer.revocationList'], 'correct extra');
       }));
     });
+  },
+});
+
+errorTest('required', {
+  'getLinkedStructures: missing required url': function(cb) {
+    const assertion = generators['1.0.0-assertion']({
+      'badge': undefined
+    });
+    validator.getLinkedStructures(assertion, cb);
+  }
+});
+
+errorTest('unreachable', {
+  'getLinkedStructures: unreachable url': function(cb) {
+    const assertion = generators['1.0.0-assertion']({
+      'badge': UNREACHABLE
+    });
+    validator.getLinkedStructures(assertion, cb);
+  },
+  'validateHostedUrl: url unreachable': function(cb) {
+    validator.validateHostedUrl(UNREACHABLE + '/assertion', cb);
   },
 });
 
