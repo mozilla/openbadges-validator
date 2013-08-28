@@ -17,7 +17,8 @@
   "devDependencies": {
     "nock": "~0.22.1",
     "tap": "~0.4.0",
-    "underscore": "~1.5.1"
+    "underscore": "~1.5.1",
+    "sinon": "~1.7.3"
   },
   "engines": {
     "node": "~0.10.0"

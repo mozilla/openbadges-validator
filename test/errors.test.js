@@ -1,5 +1,6 @@
 const test = require('tap').test;
 const nock = require('nock');
+const sinon = require('sinon');
 const _ = require('underscore');
 const validator = require('..');
 const generators = require('./test-generators');
@@ -160,10 +161,13 @@ test('validateHosted', function (t) {
         .get('/image').reply(404);
       const assertion = generators['0.5.0']();
       validator.validateHosted(assertion, function(err, data) {
+        console.log(err);
         t.ok(err, 'should have error');
         t.same(err.code, 'resources');
-        t.ok(err.extra['badge.image'], 'correct extra');
         t.ok(err.message, 'has message');
+        t.ok(err.extra['badge.image'], 'correct extra');
+        var extra = err.extra['badge.image'];
+        t.same(extra.code, 'http-status');
         t.end();
       });
     });
@@ -276,12 +280,14 @@ test('validateHostedUrl', function (t) {
   });
 
   t.test('http-status error', function (t) {
-    t.test('url 404s', function(t) {
+    t.test('assertion url 404s', function(t) {
       httpScope()
         .get('/assertion').reply(404);
       validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'http-status');
+        t.same(err.url, ORIGIN + '/assertion');
+        t.same(err.received, 404);
         t.ok(err.message, 'has message');
         t.end();
       });
@@ -289,13 +295,27 @@ test('validateHostedUrl', function (t) {
   });
 
   t.test('unreachable error', function (t) {
-    t.test('url unreachable', function(t) {
+    t.test('assertion url unreachable', function(t) {
       validator.validateHostedUrl(UNREACHABLE + '/assertion', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'unreachable');
+        t.same(err.url, UNREACHABLE + '/assertion');
+        t.ok(err.reason, 'has reason');
         t.ok(err.message, 'has message');
         t.end();
       });
+    });
+  });
+
+  t.test('delegates to validateHosted', function (t) {
+    httpScope()
+      .get('/assertion').reply(200, { 'hiphip': 'hooray' });
+    sinon.stub(validator, 'validateHosted').callsArgWith(1, null, 'ok');
+    validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
+      t.ok(validator.validateHosted.calledOnce, 'validateHosted called');
+      t.ok(validator.validateHosted.calledWith({ 'hiphip': 'hooray' }), 'called with assertion data');
+      validator.validateHosted.restore();
+      t.end();
     });
   });
 
@@ -482,6 +502,38 @@ test('validate', function(t) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
+        t.end();
+      });
+    });
+  });
+
+  t.test('delegation', function (t) {
+    t.test('delegates to validateHosted', function (t) {
+      sinon.stub(validator, 'validateHosted').callsArgWith(1, null, 'ok');
+      validator({}, function(err, data) {
+        t.ok(validator.validateHosted.called, 'calls validateHosted');
+        validator.validateHosted.restore();
+        t.end();
+      });
+    });
+    t.test('delegates to validateHostedUrl', function (t) {
+      sinon.stub(validator, 'validateHostedUrl').callsArgWith(1, null, 'ok');
+      validator('http://whereever.com/assertion', function(err, data) {
+        t.ok(validator.validateHostedUrl.called, 'calls validateHostedUrl');
+        validator.validateHostedUrl.restore();
+        t.end();
+      });
+    });
+    t.test('delegates to validateSigned', function (t) {
+      sinon.stub(validator, 'validateSigned').callsArgWith(1, null, 'ok');
+      const signature = jws.sign({
+        header: { alg: 'HS256' },
+        payload: { recipient: 'yup' },
+        privateKey: keys.private
+      });
+      validator(signature, function(err, data) {
+        t.ok(validator.validateSigned.called, 'calls validateSigned');
+        validator.validateSigned.restore();
         t.end();
       });
     });
