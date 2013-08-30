@@ -103,7 +103,7 @@ email addresses may be supported.)
 All tests can be run with `npm test`.
 
 If you have `node-cover` installed, a code coverage report can be generated
-with `make test-cov` and viewed in `cover_html/index.html`.
+with `grunt test-cov` and viewed in `cover_html/index.html`.
 
 # License
 
