@@ -1,6 +1,9 @@
 var fs = require('fs');
+var path = require('path');
 var exec = require('child_process').exec;
 var async = require('async');
+
+var TEST_DIR = path.join('.', 'test');
 
 module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
@@ -14,7 +17,7 @@ module.exports = function(grunt) {
   grunt.registerTask('test-cov', 'Run test coverage report', function() {
     var testFiles;
     if (arguments.length === 0) {
-      testFiles = fs.readdirSync('./test').filter(function(file) {
+      testFiles = fs.readdirSync(TEST_DIR).filter(function(file) {
         return file.match(/.*\.test\.js$/);
       });
       grunt.log.writeln('Running full coverage');
@@ -29,7 +32,8 @@ module.exports = function(grunt) {
       function(callback) {
         async.each(testFiles, function(file, callback){
           grunt.log.writeln('covering ' + file + '...');
-          exec('cover run test/' + file, function(err, stdout, stderr) {
+          var command = 'cover run ' + path.join(TEST_DIR, file);
+          exec(command, function(err, stdout, stderr) {
             callback(err || stderr)
           });
         }, callback);
