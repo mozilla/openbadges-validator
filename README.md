@@ -102,8 +102,14 @@ email addresses may be supported.)
 
 All tests can be run with `npm test`.
 
-If you have `node-cover` installed, a code coverage report can be generated
-with `grunt test-cov` and viewed in `cover_html/index.html`.
+A code coverage report can be generated with `node_modules/.bin/jake test-cov`
+(or `jake test-cov` if you have [jake][] installed globally)
+and viewed in `cover_html/index.html`.
+
+The coverage tool used is [node-cover][], see its documentation for details.
+
+[jake]: https://github.com/mde/jake
+[node-cover]: https://github.com/itay/node-cover
 
 # License
 

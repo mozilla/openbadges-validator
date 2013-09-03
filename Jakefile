@@ -1,8 +1,13 @@
 var path = require('path');
 var fs = require('fs');
 
+const COVER = path.join('.', 'node_modules', '.bin', 'cover');
 const TEST_DIR = path.join('.', 'test');
 const SLEEP = 1000;   // delay between `cover run`s and `cover combine`
+
+function cover(subCmd) {
+  return COVER + ' ' + subCmd;
+}
 
 desc('Clean and run test coverage');
 task('default', ['clean', 'test-cov']);
@@ -37,7 +42,7 @@ task('test-cov', {async: true}, function () {
   }
 
   var coverCmds = files.map(function(file){
-    return 'cover run ' + file;
+    return cover('run ' + file);
   });
 
   jake.logger.log('Executing commands:\n\t' + coverCmds.join('\n\t'));
@@ -46,8 +51,8 @@ task('test-cov', {async: true}, function () {
     // Sleeping seems to ensure that `cover combine` sees all of the runs
     setTimeout(function(){
       var cmds = [
-        'cover combine',
-        'cover report html'
+        cover('combine'),
+        cover('report html')
       ];
       jake.logger.log('Executing commands:\n\t' + cmds.join('\n\t'));
       jake.exec(cmds, function() {
