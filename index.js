@@ -329,7 +329,7 @@ function validateHostedUrl(input, callback) {
       result.error.field = 'assertion';
       return callback(result.error);
     }
-    return validateHosted(result.body, callback, input);
+    return validate.validateHosted(result.body, callback, input);
   });
 }
 
@@ -344,13 +344,13 @@ function validateSigned(input, callback) {
 function validate(input, callback) {
   const errs = [];
   if (isObject(input)) {
-    return validateHosted(input, callback);
+    return validate.validateHosted(input, callback);
   }
   if (typeof input === 'string') {
     if (isSignedBadge(input))
-      return validateSigned(input, callback);
+      return validate.validateSigned(input, callback);
     if (isUrl(input))
-      return validateHostedUrl(input, callback);
+      return validate.validateHostedUrl(input, callback);
     return callback(makeError('input', 'not a valid signed badge or url', { input: input }));
   }
   return callback(makeError('input', 'input must be a string or object', { input: input }));

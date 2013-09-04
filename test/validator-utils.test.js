@@ -156,6 +156,20 @@ test('validator.getAssertionGUID fails w/ bad JWS payload', function(t) {
   });
 });
 
+test('validator.absolutize: not an old assertion', function (t) {
+  const assertion = {url: '/some/path'};
+  const result = validator.absolutize(assertion);
+  t.same(result, assertion, 'input unchanged');
+  t.end();
+});
+
+test('validator.absolutize: no badge issuer origin', function (t) {
+  const assertion = {badge: {issuer: {}}};
+  const result = validator.absolutize(assertion);
+  t.notOk(result, 'returns false');
+  t.end();
+});
+
 test('validator.absolutize: all relative', function (t) {
   const assertion = generators['0.5.0']({
     'evidence': '/evidence',
@@ -197,5 +211,14 @@ test('VALID_HASHES are recognized by node crypto', function (t) {
     t.ok(require('crypto').createHash(algorithm),
          algorithm + ' algorithm is recognized by node crypto');
   });
+  t.end();
+});
+
+test('validator.isOldAssertion', function (t) {
+  t.notOk(validator.isOldAssertion());
+  t.notOk(validator.isOldAssertion('nope'));
+  t.notOk(validator.isOldAssertion({badge: 'non-obj'}));
+  t.notOk(validator.isOldAssertion({badge: {issuer: 'non-obj'}}));
+  t.ok(validator.isOldAssertion({badge: {issuer: {}}}));
   t.end();
 });
