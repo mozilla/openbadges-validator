@@ -98,6 +98,13 @@ by the `validator` function.
 `identity` is an email address. (In the future, identities other than
 email addresses may be supported.)
 
+# Tests
+
+All tests can be run with `npm test`.
+
+If you have `node-cover` installed, a code coverage report can be generated
+with `grunt test-cov` and viewed in `cover_html/index.html`.
+
 # License
 
 [MPL 2.0](http://www.mozilla.org/MPL/2.0/)
