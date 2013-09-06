@@ -98,6 +98,19 @@ by the `validator` function.
 `identity` is an email address. (In the future, identities other than
 email addresses may be supported.)
 
+# Tests
+
+All tests can be run with `npm test`.
+
+A code coverage report can be generated with `node_modules/.bin/jake test-cov`
+(or `jake test-cov` if you have [jake][] installed globally)
+and viewed in `cover_html/index.html`.
+
+The coverage tool used is [node-cover][], see its documentation for details.
+
+[jake]: https://github.com/mde/jake
+[node-cover]: https://github.com/itay/node-cover
+
 # License
 
 [MPL 2.0](http://www.mozilla.org/MPL/2.0/)
