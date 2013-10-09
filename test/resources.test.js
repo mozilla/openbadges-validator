@@ -1,10 +1,14 @@
 const fs = require('fs');
+const path = require('path');
+const dataUrl = require('dataurl');
 const test = require('tap').test;
 const resources = require('../lib/resources');
 const nock = require('nock');
 
 const ORIGIN = 'https://example.org';
 const httpScope = nock(ORIGIN);
+
+var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
 
 test('getUrl: required, missing', function (t) {
   resources.getUrl({
@@ -108,19 +112,27 @@ test('getUrl: json, parseable', function (t) {
 });
 
 test('getUrl: image data', function (t) {
-  const imgData = fs.readFileSync(__dirname + '/cc.large.png');
   httpScope
-    .get('/test').reply(200, imgData, {'content-type': 'image/png'})
+    .get('/test').reply(200, imageData, {'content-type': 'image/png'})
   resources.getUrl({
     url: ORIGIN + '/test',
     required: true
   }, function (ex, result) {
-    t.same(imgData, result.body);
+    t.same(imageData, result.body);
     t.end();
   });
 });
 
-
+test('getUrl: dataURL', function (t) {
+  resources.getUrl({
+    url: dataUrl.format({data: imageData, mimetype: 'image/png'}),
+    required: true,
+    'content-type': 'image/png',
+  }, function (ex, result) {
+    t.same(imageData, result.body);
+    t.end();
+  });
+})
 
 test('resources', function (t) {
   httpScope
@@ -157,4 +169,3 @@ test('resources', function (t) {
     t.end();
   });
 });
-
