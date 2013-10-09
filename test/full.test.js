@@ -1,12 +1,18 @@
+const fs = require('fs');
+const path = require('path');
 const jws = require('jws');
 const test = require('tap').test;
 const validator = require('..');
 const nock = require('nock');
 const generators = require('./test-generators');
 const keys = require('./test-keys');
+const dataUrl = require('dataurl')
 
 var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
+var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
+
+console.dir();
 
 test('validate, signed', function (t) {
   const assertion = generators['1.0.0-assertion']({
@@ -118,6 +124,33 @@ test('validate, new hosted by url', function (t) {
     t.end();
   });
 });
+
+test('validate, new hosted by url with dataURI image', function (t) {
+  const assertion = generators['1.0.0-assertion']({
+    image: dataUrl.convert({
+      data: imageData,
+      mimetype: 'image/png'
+    })
+  });
+  const badge = generators['1.0.0-badge']();
+  const issuer = generators['1.0.0-issuer']();
+  httpScope
+    .get('/').reply(200, 'root')
+    .get('/assertion').reply(200, JSON.stringify(assertion))
+    .get('/assertion').reply(200, JSON.stringify(assertion))
+    .get('/badge').reply(200, JSON.stringify(badge))
+    .get('/issuer').reply(200, JSON.stringify(issuer))
+    .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
+    .get('/issuer-image').reply(200, 'issuer-image')
+    .get('/evidence').reply(200, 'evidence')
+    .get('/criteria').reply(200, 'criteria')
+    .get('/revocation-list').reply(200, '{"found":true}')
+  validator(ORIGIN + '/assertion', function (err, data) {
+    t.notOk(err, 'should have no errors');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
+    t.end();
+  });
+})
 
 test('validate, new, passed object when should pass signature', function (t) {
   const assertion = generators['1.0.0-assertion']({'verify.type': 'signed'});
