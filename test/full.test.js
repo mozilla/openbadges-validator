@@ -12,8 +12,6 @@ var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
 var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
 
-console.dir();
-
 test('validate, signed', function (t) {
   const assertion = generators['1.0.0-assertion']({
     verify: {
