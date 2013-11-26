@@ -11,6 +11,15 @@ const re = require('./lib/regex');
 const resources = require('./lib/resources');
 
 const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
+const VALID_IMAGES = [
+  'image/png',
+  'image/svg',
+  'image/svg+xml'
+]
+
+function testValidImage(mime) {
+  return VALID_IMAGES.indexOf(mime) !== -1
+}
 
 var sha256 = hashedString.bind(null, 'sha256');
 
@@ -268,12 +277,6 @@ function getLinkedStructures(assertion, callback) {
 // OR a valid old-style assertion
 // callback has signature `function (errs, responses)`
 function getLinkedResources(structures, callback) {
-  const validImages = [
-    'image/png',
-    'image/svg',
-    'image/svg+xml'
-  ]
-
   function hollaback(err, result) {
     const errMsg = 'could not validate linked resources';
     if (err)
@@ -304,7 +307,7 @@ function getLinkedResources(structures, callback) {
     },
     'badge.image': {
       required: true,
-      'content-type': 'image/png'
+      'content-type': validImages
     },
     'issuer.image': { required: false },
     'issuer.revocationList': {
@@ -614,7 +617,7 @@ const isAbsoluteUrlOrDataURI = makeValidator({
     if (isAbsoluteUrl(thing))
       return true;
     const image = dataurl.parse(thing);
-    if (image && image.mimetype === 'image/png')
+    if (image && testValidImage(image.mimetype))
       return true;
     return false
   }
