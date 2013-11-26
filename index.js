@@ -268,6 +268,12 @@ function getLinkedStructures(assertion, callback) {
 // OR a valid old-style assertion
 // callback has signature `function (errs, responses)`
 function getLinkedResources(structures, callback) {
+  const validImages = [
+    'image/png',
+    'image/svg',
+    'image/svg+xml'
+  ]
+
   function hollaback(err, result) {
     const errMsg = 'could not validate linked resources';
     if (err)
@@ -283,14 +289,14 @@ function getLinkedResources(structures, callback) {
     }, {
       'badge.image': {
         required: true,
-        'content-type': 'image/png',
+        'content-type': validImages,
       },
     }, hollaback);
   }
   return resources(structures, {
     'assertion.image': {
       required: false,
-      'content-type': 'image/png'
+      'content-type': validImages,
     },
     'assertion.verify.url': {
       required: true,

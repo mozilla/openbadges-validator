@@ -127,7 +127,7 @@ test('getUrl: dataURL', function (t) {
   resources.getUrl({
     url: dataUrl.format({data: imageData, mimetype: 'image/png'}),
     required: true,
-    'content-type': 'image/png',
+    'content-type': ['image/png', 'image/svg+xml'],
   }, function (ex, result) {
     t.same(imageData, result.body);
     t.end();
