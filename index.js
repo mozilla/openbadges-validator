@@ -292,14 +292,14 @@ function getLinkedResources(structures, callback) {
     }, {
       'badge.image': {
         required: true,
-        'content-type': validImages,
+        'content-type': VALID_IMAGES,
       },
     }, hollaback);
   }
   return resources(structures, {
     'assertion.image': {
       required: false,
-      'content-type': validImages,
+      'content-type': VALID_IMAGES,
     },
     'assertion.verify.url': {
       required: true,
@@ -307,7 +307,7 @@ function getLinkedResources(structures, callback) {
     },
     'badge.image': {
       required: true,
-      'content-type': validImages
+      'content-type': VALID_IMAGES
     },
     'issuer.image': { required: false },
     'issuer.revocationList': {
