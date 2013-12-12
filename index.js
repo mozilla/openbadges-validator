@@ -685,10 +685,11 @@ function validateInterdependentFields(info, cb) {
 
   const errs = {};
   const testRequired = makeRequiredValidator(errs);
+  const testOptional = makeOptionalValidator(errs);
 
   if (recipient.hashed) {
     testRequired(recipient.identity, isHash, {field: 'recipient.identity'});
-    testRequired(recipient.salt, isString, {field: 'recipient.salt'});
+    testOptional(recipient.salt, isString, {field: 'recipient.salt'});
   } else {
     if (recipient.type == "email") {
       testRequired(recipient.identity, isEmail, {field: 'recipient.identity'});
