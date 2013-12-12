@@ -273,7 +273,7 @@ test('1.0.0: validateInterdependentFields()', function(t) {
     type: 'email',
     identity: 'sha256$abcd'
   }}}}, function(err, info) {
-    t.equal(err['recipient.salt'].message, 'must be a string');
+    t.notOk(err, 'should have no errors');
   });
 
   validateInterdependentFields({structures: {assertion: {recipient: {
