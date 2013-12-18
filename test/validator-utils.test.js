@@ -58,6 +58,10 @@ test('validator.doesRecipientMatch works w/ 0.5.0 assertions', function(t) {
   }), 'bar@example.org'), false, "works w/ unmatching hashed identities");
 
   t.equal(validator.doesRecipientMatch(mkInfo({
+    recipient: 'sha256$' + validator.sha256('foo@example.org')
+  }), 'foo@example.org'), true, "works w/ matching unsalted hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
     recipient: 'foo@example.org'
   }), 'foo@example.org'), true, "works w/ matching unhashed identities");
 
