@@ -29,6 +29,11 @@ test('validator.doesHashedEmailMatch works', function(t) {
     'lol',
     'bar@example.org'
   ), false, "returns false when hashes don't match");
+  t.equal(validator.doesHashedEmailMatch(
+    'sha256$' + validator.sha256('foo@example.org'),
+    undefined,
+    'foo@example.org'
+  ), true, "unsalted returns true");
   t.end();
 });
 
@@ -51,6 +56,10 @@ test('validator.doesRecipientMatch works w/ 0.5.0 assertions', function(t) {
     salt: 'lol',
     recipient: 'sha256$' + validator.sha256('foo@example.org' + 'lol')
   }), 'bar@example.org'), false, "works w/ unmatching hashed identities");
+
+  t.equal(validator.doesRecipientMatch(mkInfo({
+    recipient: 'sha256$' + validator.sha256('foo@example.org')
+  }), 'foo@example.org'), true, "works w/ matching unsalted hashed identities");
 
   t.equal(validator.doesRecipientMatch(mkInfo({
     recipient: 'foo@example.org'

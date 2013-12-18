@@ -233,7 +233,7 @@ test('0.5.0: validateOldInterdependentFields()', function(t) {
   validator.validateOldInterdependentFields({structures: {assertion: {
     recipient: 'sha256$abcd'
   }}}, function(err) {
-    t.equal(err.recipient.message, 'must be an email address');
+    t.notOk(err, 'should have no errors');
   });
 
   validator.validateOldInterdependentFields({structures: {assertion: {

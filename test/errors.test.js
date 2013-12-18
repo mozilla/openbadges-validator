@@ -18,22 +18,6 @@ var httpScope = function() {
 test('validateHosted', function (t) {
 
   // TODO: categorize in appropriate error group or create new
-  t.test('0.5 assertion, hashed email, no salt', function (t) {
-    const assertion = generators['0.5.0']({
-      salt: undefined
-    });
-    httpScope()
-      .get('/image').reply(200, 'badge-image', {'content-type': 'image/png'});
-    validator.validateHosted(assertion, function(err, data) {
-      t.ok(err, 'should have error');
-      // FIXME: err has no code or message
-      //t.same(err.code, '<CODE HERE>');
-      //t.ok(err.message, 'has message');
-      t.end();
-    });
-  });
-
-  // TODO: categorize in appropriate error group or create new
   t.test('1.0 assertion, hashed true, identity unhashed', function (t) {
     const assertion = generators['1.0.0-assertion']({
       'recipient.identity': 'someone@somewhere.org' 
