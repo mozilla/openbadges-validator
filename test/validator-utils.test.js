@@ -29,6 +29,11 @@ test('validator.doesHashedEmailMatch works', function(t) {
     'lol',
     'bar@example.org'
   ), false, "returns false when hashes don't match");
+  t.equal(validator.doesHashedEmailMatch(
+    'sha256$' + validator.sha256('foo@example.org'),
+    undefined,
+    'foo@example.org'
+  ), true, "unsalted returns true");
   t.end();
 });
 

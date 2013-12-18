@@ -30,6 +30,8 @@ function hashedString(algorithm, str) {
 }
 
 function doesHashedEmailMatch(hashedEmail, salt, email) {
+  if (!salt)
+    salt = '';
   var match = hashedEmail.match(re.hash);
   var algorithm = match[1];
   var hash = match[2];
@@ -675,7 +677,7 @@ function validateOldInterdependentFields(info, cb) {
   const testRequired = makeRequiredValidator(errs);
 
   testRequired(assertion.recipient,
-               assertion.salt ? isHash : isEmail, {field: 'recipient'});
+               assertion.hasOwnProperty('salt') ? isHash : isEmailOrHash, {field: 'recipient'});
 
   cb(objectIfKeys(errs), info);
 }
