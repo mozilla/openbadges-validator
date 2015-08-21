@@ -388,6 +388,7 @@ function unpackJWS(signature, callback) {
   const payload = jsonParse(parts.payload);
   if (!payload)
     return callback(makeError('jws-payload-parse'));
+  payload.header = parts.header;  // adding header information
   return callback(null, payload)
 }
 
@@ -457,9 +458,10 @@ function fullValidateSignedAssertion(signature, callback) {
       return getLinkedResources(structures, callback);
     },
     function verifySignature(resources, callback) {
+      algorithm = data.structures.assertion.header.alg;
       data.resources = resources;
       const publicKey = resources['assertion.verify.url'];
-      if (!jws.verify(signature, publicKey))
+      if (!jws.verify(signature, algorithm, publicKey))
         return callback(makeError('verify-signature'))
       return callback(null, resources);
     },
