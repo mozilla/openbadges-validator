@@ -11,7 +11,7 @@
     "dataurl": "~0.1.0",
     "request": "~2.14.0",
     "async": "~0.2.5",
-    "jws": "0.2.2",
+    "jws": "~3.1.0",
     "deep-equal": "0.0.0"
   },
   "devDependencies": {
