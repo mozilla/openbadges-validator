@@ -8,7 +8,7 @@ const jws = require('jws');
 const keys = require('./test-keys');
 const util = require('util');
 
-var UNREACHABLE = 'http://nope.example.org/'; // not sure how to do this with nock
+var UNREACHABLE = 'http://example.org/';
 var ORIGIN = 'https://example.org';
 var httpScope = function() {
   nock.cleanAll();
@@ -179,7 +179,7 @@ test('validateHosted', function (t) {
       });
       validator.validateHosted(assertion, function(err, data) {
         t.ok(err, 'should have error');
-        t.same(err.code, 'unreachable');
+        t.same(err.code, 'unreachable'); // Fails when UNREACHABLE = 'http://nope.example.org'
         t.ok(err.message, 'has message');
         t.end();
       });
@@ -268,7 +268,7 @@ test('validateHostedUrl', function (t) {
       httpScope()
         .get('/assertion').reply(404);
       validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
-        t.ok(err, 'should have error');
+        t.ok(err, 'should have error'); // Times out
         t.same(err.code, 'http-status');
         t.same(err.url, ORIGIN + '/assertion');
         t.same(err.received, 404);
@@ -282,7 +282,7 @@ test('validateHostedUrl', function (t) {
     t.test('assertion url unreachable', function(t) {
       validator.validateHostedUrl(UNREACHABLE + '/assertion', function(err, data) {
         t.ok(err, 'should have error');
-        t.same(err.code, 'unreachable');
+        t.same(err.code, 'unreachable'); // Fails when UNREACHABLE = 'http://nope.example.org'
         t.same(err.url, UNREACHABLE + '/assertion');
         t.ok(err.reason, 'has reason');
         t.ok(err.message, 'has message');
