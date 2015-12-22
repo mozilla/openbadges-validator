@@ -58,7 +58,7 @@ test('validator.getLinkedResources, all errors', function (t) {
     issuer: generators['1.0.0-issuer']()
   };
   validator.getLinkedResources(structures, function (err, results) {
-    t.same(err.code, 'resources', 'code should be resources'); // Times out
+    t.same(err.code, 'resources', 'code should be resources'); // Times out consistently
     t.same(err.extra['assertion.image'].code, 'unreachable');
     t.same(err.extra['assertion.verify.url'].code, 'unreachable');
     t.same(err.extra['badge.image'].code, 'unreachable');

@@ -159,7 +159,7 @@ test('resources', function (t) {
     'c.image': { required: true },
     'd.does.not.exist': { optional: false }
   }, function (err, results) {
-    t.same(results['a.root'].toString(), 'a.root'); // Times out
+    t.same(results['a.root'].toString(), 'a.root');
     t.same(results['a.nested.url'].toString(), 'a.nested.url');
 
     t.same(err['b.image'].code, 'content-type');

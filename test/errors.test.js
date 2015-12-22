@@ -268,7 +268,7 @@ test('validateHostedUrl', function (t) {
       httpScope()
         .get('/assertion').reply(404);
       validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
-        t.ok(err, 'should have error'); // Times out
+        t.ok(err, 'should have error');
         t.same(err.code, 'http-status');
         t.same(err.url, ORIGIN + '/assertion');
         t.same(err.received, 404);
