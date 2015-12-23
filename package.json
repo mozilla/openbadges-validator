@@ -15,7 +15,7 @@
     "deep-equal": "0.0.0"
   },
   "devDependencies": {
-    "nock": "~0.22.1",
+    "nock": "~1.0.0",
     "tap": "~0.4.0",
     "underscore": "~1.5.1",
     "sinon": "~1.7.3",
@@ -23,7 +23,7 @@
     "cover": "0.2.9"
   },
   "engines": {
-    "node": "~0.10.0"
+    "node": "~0.12.7"
   },
   "scripts": {
     "test": "node node_modules/tap/bin/tap test/*.test.js"
