@@ -23,7 +23,7 @@
     "cover": "0.2.9"
   },
   "engines": {
-    "node": "~0.12.7"
+    "node": "~0.10.0"
   },
   "scripts": {
     "test": "node node_modules/tap/bin/tap test/*.test.js"
