@@ -8,7 +8,7 @@ const jws = require('jws');
 const keys = require('./test-keys');
 const util = require('util');
 
-var UNREACHABLE = 'http://nope.example.org/';
+var UNREACHABLE = 'http://nope.example.org/'; // not sure how to do this with nock
 var ORIGIN = 'https://example.org';
 var httpScope = function() {
   nock.cleanAll();
