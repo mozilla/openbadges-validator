@@ -133,7 +133,7 @@ test('validator.unpackJWS: bad payload', function (t) {
 });
 
 test('validator.unpackJWS: everything good', function (t) {
-  const expect = {sup: 'lol'};
+  const expect = {sup: 'lol', header: { alg: 'rs256' }};
   const signature = jws.sign({
     header: { alg: 'rs256' },
     payload: expect,
