@@ -108,6 +108,15 @@ and viewed in `cover_html/index.html`.
 
 The coverage tool used is [node-cover][], see its documentation for details.
 
+
+### Command line tool
+
+Once installed, you can validate a badge URL at the command line:
+
+```bash
+node bin/openbadges-validate http://hostedbadge.com/
+```
+
 [jake]: https://github.com/mde/jake
 [node-cover]: https://github.com/itay/node-cover
 
