@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+var validator = require('../');
+var input = process.argv.slice(2)[0];
+
+(function main () {
+  console.log('Validating input: ' + input);
+  validator.validate(input, handleResponse);
+})();
+
+function handleResponse (response) {
+  if (response === null) {
+    console.log('Okay');
+    process.exit(0);
+  }
+  if (response instanceof Error) {
+    console.log('Error');
+    if (response.name && response.message) {
+      console.log(response.name + ': ' + response.message);
+    }
+    if (response.reason) {
+      console.log('└── ' + response.reason);
+    }
+    process.exit(1);
+  }
+  console.log('Unknown error:');
+  console.log(response);
+  process.exit(1);
+}
