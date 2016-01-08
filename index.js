@@ -363,9 +363,9 @@ function validate(input, callback) {
     if (isUrl(input))
       return validate.validateHostedUrl(input, callback);
     if (isJson(input))
-      var json = JSON.parse(input);
-      if (typeof json.verify.url !== 'undefined' && isUrl(json.verify.url))
-        return validate.validateHostedUrl(json.verify.url, callback, '');
+      var url = urlFromAssertion(JSON.parse(input));
+      if (url)
+        return validate.validateHostedUrl(url, callback, '');
     return callback(makeError('input', 'not a valid signed badge or url', { input: input }));
   }
   return callback(makeError('input', 'input must be a string or object', { input: input }));
@@ -547,6 +547,15 @@ function getInternalClass(thing) {
 
 function isJson (str) {
   try { JSON.parse(str); return true } catch(e) { return false }
+}
+
+function urlFromAssertion (json) {
+  try {
+    var url = json.verify.url;
+    if (isUrl(url))
+      return url;
+    return false;
+  } catch(e) { return false; }
 }
 
 const isUrl = regexToValidator(re.url, 'must be a URL');
