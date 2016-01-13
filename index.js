@@ -265,10 +265,18 @@ function getLinkedStructures(assertion, callback) {
   };
   async.waterfall([
     function getLinkedBadge(callback) {
-      getStructure(structures.assertion.badge, 'badge', callback);
+      try {
+	getStructure(structures.assertion.badge, 'badge', callback);
+      } catch (e) {
+	callback(e);
+      }
     },
     function getLinkedIssuer(callback) {
-      getStructure(structures.badge.issuer, 'issuer', callback);
+      try {
+	getStructure(structures.badge.issuer, 'issuer', callback);
+      } catch (e) {
+	callback(e);
+      }
     }
   ], function (err) {
     return callback(err, structures);
