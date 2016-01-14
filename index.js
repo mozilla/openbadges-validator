@@ -94,20 +94,6 @@ function isOldAssertion(assertion) {
   return true;
 }
 
-function validateToSpec(specVersion, assertion) {
-  switch (specVersion) {
-    case "1.0.0":
-      return validateBadgeAssertion(assertion);
-      break;
-    case "0.5.0":
-      return validateOldAssertion(assertion);
-      break;
-    default:
-      return makeError("Validation for " + specVersion + " not available.");
-      break;
-  }
-}
-
 function validateAssertion(assertion, prefix){
   if (isOldAssertion(assertion))
     return validateOldAssertion(assertion);
