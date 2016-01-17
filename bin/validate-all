@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+var validator = require('../');
+var validator = require('jsonld');
+var input = process.argv.slice(2)[0];
+var specVersions = ['0.5.0', '1.0.0', '1.1.0', '2.0.0'];
+
+(function main () {
+  console.log('Validating input: ' + input);
+  validateAll(input, handleResponse);
+})();
+
+function validateAll (input, handleResponse) {
+  var type = 'Unknown';
+  if (false) {
+    type = 'URL';
+  }
+  if (false) {
+    type = 'JSON';
+  }
+  response = {
+    type: type,
+    '0.5.0': {valid: false, reason: 'None'},
+    '1.0.0': {valid: false, reason: 'None'},
+    '1.1.0': {valid: false, reason: 'None'},
+    '2.0.0': {valid: false, reason: 'Validation unavailable'}
+  };
+  handleResponse(response);
+}
+
+function handleResponse (response) {
+  //var output = toCsvRow(['Type', '0.5.0', 'Reason', '1.0.0', 'Reason', '1.1.0', 'Reason', '2.0.0', 'Reason']);
+  var values = [response.type];
+  for (var i = 0; i < specVersions.length; i++) {
+    var result = response[specVersions[i]];
+    values.push((result.valid) ? 'PASS' : 'FAIL');
+    values.push(result.reason);
+  }
+  console.log(toCsvRow(values));
+}
+
+function toCsvRow(array) {
+  return '"' + array.join('","') + '"\n';
+}
