@@ -1,3 +1,4 @@
 node_modules
 cover_html
 .coverage_data
+bin/validate-all.js
