@@ -7,16 +7,16 @@ var SPEC_VERSIONS = ['0.5.0', '1.0.0', '1.1.0', '2.0.0'];
 
 var validate = {
   '0.5.0': function (assertion) {
-    return toResponse(false, 'None', '');
+    return new ValidatorResponse(false, 'None', '');
   },
   '1.0.0': function (assertion) {
-    return toResponse(false, 'None', '');
+    return new ValidatorResponse(false, 'None', '');
   },
   '1.1.0': function (assertion) {
-    return toResponse(false, 'None', '');
+    return new ValidatorResponse(false, 'None', '');
   },
   '2.0.0': function (assertion) {
-    return toResponse(false, 'Unavailable', '');
+    return new ValidatorResponse(false, 'Unavailable', '');
   }
 }
 
@@ -109,18 +109,12 @@ interface Validator {
     (input: string): ValidatorResponse;   
 }
 
-function toResponse(valid, reason, details) {
-  return {
-    valid: valid,
-    reason: reason,
-    details: details,
+class ValidatorResponse {
+  constructor(public valid: boolean, public reason: string, public details: string) {
+    this.valid = valid;
+    this.reason = reason;
+    this.details = details;
   }
-}
-
-interface ValidatorResponse {
-  valid: boolean;
-  reason: string;
-  details: string;
 }
 
 class ValidationTest {
