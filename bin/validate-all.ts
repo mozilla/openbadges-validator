@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-var validator = require('../');
-var jsonld = require('jsonld');
+const validator = require('../');
+const resources = require('../lib/resources');
+const jsonld = require('jsonld');
 var input = process.argv.slice(2)[0];
 var SPEC_VERSIONS = ['0.5.0', '1.0.0', '1.1.0', '2.0.0'];
 
@@ -21,10 +22,24 @@ var validate = {
 
 class FullValidationResponse {
   inputType: string;
+  assertion: Assertion;
   response: Object;
+
+  constructor(public input: string) {
+    this.response = {};
+    this.assertion = new Assertion(input);
+    if (this.assertion.inputType == 'Unknown') {
+      return;
+    }
+    for (var i = 0; i < SPEC_VERSIONS.length; i++) {
+      var version = SPEC_VERSIONS[i];
+      this.response[version] = new ValidationTest(this.assertion.body, validate[version]);
+    }
+  };
+
   toCsvRow() {
-    var values = [this.input, this.inputType];
-    if (this.inputType == 'Unknown') {
+    var values = [this.assertion.raw, this.assertion.inputType, this.assertion.verifyUrl, this.assertion.body, this.assertion.fetchError];
+    if (this.assertion.inputType == 'Unknown') {
       for (var i = 0; i < SPEC_VERSIONS.length; i++) {
         values.push('FAIL');
         values.push('Unknown assertion format');
@@ -33,42 +48,51 @@ class FullValidationResponse {
     else {
       for (var i = 0; i < SPEC_VERSIONS.length; i++) {
         var version = SPEC_VERSIONS[i];
-        //console.log(this.response);
-        //console.log(this.response[version]);
-        values.push((this.response[version].valid) ? 'PASS' : 'FAIL');
+        values.push((this.response[version].valid) ? 'OKAY' : 'FAIL');
         values.push(this.response[version].reason);
-      }      
+      }
     }
     return '"' + values.join('","') + '"\n';
-  };
-  constructor(public input: string) {
-    var assertion = new Assertion(input);
-    this.inputType = assertion.type;
-    if (assertion.type == 'Unknown') {
-      return;
-    }
-    for (var i = 0; i < SPEC_VERSIONS.length; i++) {
-      var version = SPEC_VERSIONS[i];
-      this.response[version] = new ValidationTest(assertion.body, validate[version]);
-    }
   };
 }
 
 class Assertion {
-  type: string;
+  raw: string;
+  inputType: string;
+  verifyUrl: string;
   body: string;
+  fetchError: string;
   constructor(public input: string) {
-    if (isUrl(input)) {
-      this.type = 'URL';
-      this.body = input;
-    } else if (isJson(input)) {
-      this.type = 'JSON';
-      this.body = input;
-    } else {
-      this.type = 'Unknown';
-      this.body = '';
+    this.raw = input;
+    this.body = '';
+    this.verifyUrl = '';
+    this.fetchError = '';
+    this.inputType = (isJson(this.raw) ? 'JSON' : (isUrl(this.raw) ? 'URL': 'Unknown'));
+    if (this.inputType == 'URL')
+      this.verifyUrl = this.raw;
+    if (this.inputType == 'JSON')
+      this.verifyUrl = getVerifyUrl(JSON.parse(this.raw));
+    if (!this.verifyUrl.length) {
+      return;
     }
+    const options = {url: this.verifyUrl, json: true, required: true};
+    resources.getUrl(options, function (ex, result) {
+      if (result.error) {
+        this.fetchError = result.error;
+        return;
+      }
+      this.body = result.body;
+    });
   }
+}
+
+function getVerifyUrl (json) {
+  try {
+    var url = json.verify.url;
+    if (isUrl(url))
+      return url;
+    return '';
+  } catch(e) { return ''; }
 }
 
 function isUrl(str) {
@@ -117,6 +141,7 @@ function validateAll (input, handleResponse) {
 }
 
 (function main () {
-  console.log('Validating input: ' + input);
+  // Header:
+  //console.log("Raw input, input type, verify URL, fetch body, fetch error, [tests 0.5.0 - 2.0.0]");
   validateAll(input, 'toCsvRow');
 })();

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 var validator = require('../');
+var resources = require('../lib/resources');
 var jsonld = require('jsonld');
 var input = process.argv.slice(2)[0];
 var SPEC_VERSIONS = ['0.5.0', '1.0.0', '1.1.0', '2.0.0'];
@@ -20,19 +21,20 @@ var validate = {
 var FullValidationResponse = (function () {
     function FullValidationResponse(input) {
         this.input = input;
-        var assertion = new Assertion(input);
-        this.inputType = assertion.type;
-        if (assertion.type == 'Unknown') {
+        this.response = {};
+        this.assertion = new Assertion(input);
+        if (this.assertion.inputType == 'Unknown') {
             return;
         }
         for (var i = 0; i < SPEC_VERSIONS.length; i++) {
             var version = SPEC_VERSIONS[i];
-            this.response[version] = new ValidationTest(assertion.body, validate[version]);
+            this.response[version] = new ValidationTest(this.assertion.body, validate[version]);
         }
     }
+    ;
     FullValidationResponse.prototype.toCsvRow = function () {
-        var values = [this.input, this.inputType];
-        if (this.inputType == 'Unknown') {
+        var values = [this.assertion.raw, this.assertion.inputType, this.assertion.verifyUrl, this.assertion.body, this.assertion.fetchError];
+        if (this.assertion.inputType == 'Unknown') {
             for (var i = 0; i < SPEC_VERSIONS.length; i++) {
                 values.push('FAIL');
                 values.push('Unknown assertion format');
@@ -41,36 +43,52 @@ var FullValidationResponse = (function () {
         else {
             for (var i = 0; i < SPEC_VERSIONS.length; i++) {
                 var version = SPEC_VERSIONS[i];
-                //console.log(this.response);
-                //console.log(this.response[version]);
-                values.push((this.response[version].valid) ? 'PASS' : 'FAIL');
+                values.push((this.response[version].valid) ? 'OKAY' : 'FAIL');
                 values.push(this.response[version].reason);
             }
         }
         return '"' + values.join('","') + '"\n';
     };
     ;
-    ;
     return FullValidationResponse;
 })();
 var Assertion = (function () {
     function Assertion(input) {
         this.input = input;
-        if (isUrl(input)) {
-            this.type = 'URL';
-            this.body = input;
+        this.raw = input;
+        this.body = '';
+        this.verifyUrl = '';
+        this.fetchError = '';
+        this.inputType = (isJson(this.raw) ? 'JSON' : (isUrl(this.raw) ? 'URL' : 'Unknown'));
+        if (this.inputType == 'URL')
+            this.verifyUrl = this.raw;
+        if (this.inputType == 'JSON')
+            this.verifyUrl = getVerifyUrl(JSON.parse(this.raw));
+        if (!this.verifyUrl.length) {
+            return;
         }
-        else if (isJson(input)) {
-            this.type = 'JSON';
-            this.body = input;
-        }
-        else {
-            this.type = 'Unknown';
-            this.body = '';
-        }
+        var options = { url: this.verifyUrl, json: true, required: true };
+        resources.getUrl(options, function (ex, result) {
+            if (result.error) {
+                this.fetchError = result.error;
+                return;
+            }
+            this.body = result.body;
+        });
     }
     return Assertion;
 })();
+function getVerifyUrl(json) {
+    try {
+        var url = json.verify.url;
+        if (isUrl(url))
+            return url;
+        return '';
+    }
+    catch (e) {
+        return '';
+    }
+}
 function isUrl(str) {
     var urlRegex = '^(?!mailto:)(?:(?:http|https|ftp)://)(?:\\S+(?::\\S*)?@)?(?:(?:(?:[1-9]\\d?|1\\d\\d|2[01]\\d|22[0-3])(?:\\.(?:1?\\d{1,2}|2[0-4]\\d|25[0-5])){2}(?:\\.(?:[0-9]\\d?|1\\d\\d|2[0-4]\\d|25[0-4]))|(?:(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)(?:\\.(?:[a-z\\u00a1-\\uffff0-9]+-?)*[a-z\\u00a1-\\uffff0-9]+)*(?:\\.(?:[a-z\\u00a1-\\uffff]{2,})))|localhost)(?::\\d{2,5})?(?:(/|\\?|#)[^\\s]*)?$';
     var url = new RegExp(urlRegex, 'i');
@@ -109,6 +127,7 @@ function validateAll(input, handleResponse) {
     console.log(response[handleResponse]());
 }
 (function main() {
-    console.log('Validating input: ' + input);
+    // Header:
+    console.log("Raw input, input type, verify URL, fetch body, fetch error, [tests 0.5.0 - 2.0.0]");
     validateAll(input, 'toCsvRow');
 })();
