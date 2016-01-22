@@ -2,6 +2,7 @@
 const validator = require('../');
 const resources = require('../lib/resources');
 const jsonld = require('jsonld');
+var promises = jsonld.promises;
 var util = require('util');
 var input = process.argv.slice(2)[0];
 var SPEC_VERSIONS = ['0.5.0', '1.0.0', '1.1.0', '2.0.0'];
@@ -14,24 +15,38 @@ const validate = {
         assertion.fail(property, errors[property].message, ['0.5.0']);
       }
     }
-    //return assertion;
   },
   '1.0.0': function(assertion) {
     var errors = validator.validateBadgeAssertion(assertion.body);
     for (var property in errors) {
       if (errors.hasOwnProperty(property)) {
-        assertion.fail(errors, errors[property].message, ['1.0.0']);
+        assertion.fail(property, errors[property].message, ['1.0.0']);
       }
     }
-    //return assertion;
   },
   '1.1.0': function(assertion) {
-    assertion.fail('Specification', 'Version 1.1.0 unsupported.', ['1.1.0']);
-    //return assertion;
+    // First collect any 1.0.0 errors...
+    var errors = validator.validateBadgeAssertion(assertion.body);
+    for (var property in errors) {
+      if (errors.hasOwnProperty(property)) {
+        assertion.fail(property, errors[property].message, ['1.1.0']);
+      }
+    }
+    // ...Then apply additional 1.1.0 checks.
+    var promise = promises.expand(assertion);
+    promise.then(function(expanded) {
+      var promise = promises.compact(expanded, expanded['@context']);
+      promise.then(function(compacted) {
+        assertion.isLinkedData = true;
+      }, function(error) {
+        assertion.fail('jsonld', error, ['1.1.0']);
+      });
+    }, function(error) {
+      assertion.fail('jsonld', error, ['1.1.0']);
+    });
   },
   '2.0.0': function(assertion) {
     assertion.fail('Specification', 'Version 2.0.0 unsupported.', ['2.0.0']);
-    //return assertion;
   }
 }
 
@@ -42,6 +57,7 @@ class Assertion {
   public body: Object;
   public errors: Object;
   public isValid: Object;
+  public isLinkedData: boolean;
 
   constructor(public raw: string) {
     this.raw = raw;
@@ -51,6 +67,7 @@ class Assertion {
     this.body = '';
     this.errors = {};
     this.isValid = {};
+    this.isLinkedData = false;
     for (var i = 0; i < SPEC_VERSIONS.length; i++) {
       this.errors[SPEC_VERSIONS[i]] = [];
       this.isValid[SPEC_VERSIONS[i]] = true;
@@ -163,11 +180,11 @@ class CsvWriter {
 
   escapeCol(col) {
     if(isNaN(col)) {
-      if (!col) {
+      if (!col || col === '""') {
         col = '';
       } else {
         col = String(col);
-        if (col.length > 0) {
+        if (col.length) {
           col = col.split( this.enclosure ).join( this.enclosure + this.enclosure );
           col = this.enclosure + col + this.enclosure;
         }
