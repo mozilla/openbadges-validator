@@ -725,3 +725,5 @@ validate.doesHashedEmailMatch = doesHashedEmailMatch;
 validate.VALID_HASHES = VALID_HASHES;
 validate.validateOldInterdependentFields = validateOldInterdependentFields;
 validate.validateInterdependentFields = validateInterdependentFields;
+validate.validateOldAssertion = validateOldAssertion;
+validate.validateBadgeAssertion = validateBadgeAssertion;
