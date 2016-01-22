@@ -11,9 +11,7 @@ const validate = {
     var errors = validator.validateOldAssertion(assertion.body);
     for (var property in errors) {
       if (errors.hasOwnProperty(property)) {
-        console.log(errors[property].message);
         assertion.fail(property, errors[property].message, ['0.5.0']);
-        console.log('YOU WON!');
       }
     }
     //return assertion;
@@ -79,9 +77,7 @@ class Assertion {
   fail(scope: string, reason: string, versions?:Array<string>, details?: string) {
     versions = versions || SPEC_VERSIONS;
     details = details || '';
-    console.log('yessss??');
     var error = new BadgeError(scope, reason, details);
-    console.log('yay error!');
     for (var i = 0; i < versions.length; i++) {
       this.errors[versions[i]].push(error);
       this.isValid[versions[i]] = false;
@@ -124,44 +120,27 @@ function isJson (str) {
 }
 
 function check (input, handleOutput) {
-  console.log(0);
   var assertion = new Assertion(input);
-  console.log(1);
   if (assertion.verifyUrl.length) {
-    console.log(2);
     fetchVerifyUrl(assertion.verifyUrl).then(function(response) {
-      console.log(3);
       if (response !== null && typeof response === 'object') {
-        console.log(3.1);
         assertion.isFetched = true;
-        console.log('3.1.1');
         assertion.body = response;
-        console.log('3.1.2');
         for (var i = 0; i < SPEC_VERSIONS.length; i++) {
-          console.log('3.1.3.' + i);
-          console.log(SPEC_VERSIONS[i]);
-          console.log(validate[SPEC_VERSIONS[i]](assertion));
           validate[SPEC_VERSIONS[i]](assertion);
-          console.log(debug(assertion));
         }
-        console.log('3.1.4');
         handleOutput.output(assertion);
       }
       else {
-        console.log(3.2);
         assertion.fail('Fetch', 'Not a valid JSON document.');
         handleOutput.output(assertion);
       }
-      console.log(3.3);
-      
     }, function(error) {
-      console.log(4);
       assertion.fail('Fetch', error);
       handleOutput.output(assertion);
     });
   }
   else {
-    console.log(5);
     assertion.fail('Raw input', 'Not a valid verifier URL');
     handleOutput.output(assertion);
   }
