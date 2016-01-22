@@ -11,23 +11,29 @@ const validate = {
     var errors = validator.validateOldAssertion(assertion.body);
     for (var property in errors) {
       if (errors.hasOwnProperty(property)) {
-        assertion.fail(errors, errors[property]);
+        console.log(errors[property].message);
+        assertion.fail(property, errors[property].message, ['0.5.0']);
+        console.log('YOU WON!');
       }
     }
+    //return assertion;
   },
   '1.0.0': function(assertion) {
     var errors = validator.validateBadgeAssertion(assertion.body);
     for (var property in errors) {
       if (errors.hasOwnProperty(property)) {
-        assertion.fail(errors, errors[property]);
+        assertion.fail(errors, errors[property].message, ['1.0.0']);
       }
     }
+    //return assertion;
   },
   '1.1.0': function(assertion) {
-    assertion.fail('Specification', 'Version 1.1.0 unsupported.');
+    assertion.fail('Specification', 'Version 1.1.0 unsupported.', ['1.1.0']);
+    //return assertion;
   },
   '2.0.0': function(assertion) {
-    assertion.fail('Specification', 'Version 2.0.0 unsupported.');
+    assertion.fail('Specification', 'Version 2.0.0 unsupported.', ['2.0.0']);
+    //return assertion;
   }
 }
 
@@ -45,7 +51,8 @@ class Assertion {
     this.isFetched = false;
     this.fetchError = '';
     this.body = '';
-    this.errors = this.isValid = {};
+    this.errors = {};
+    this.isValid = {};
     for (var i = 0; i < SPEC_VERSIONS.length; i++) {
       this.errors[SPEC_VERSIONS[i]] = [];
       this.isValid[SPEC_VERSIONS[i]] = true;
@@ -72,9 +79,12 @@ class Assertion {
   fail(scope: string, reason: string, versions?:Array<string>, details?: string) {
     versions = versions || SPEC_VERSIONS;
     details = details || '';
-    for (var i = 0; i < SPEC_VERSIONS.length; i++) {
-      this.errors[SPEC_VERSIONS[i]].push(new BadgeError(scope, reason, details));
-      this.isValid[SPEC_VERSIONS[i]] = false;
+    console.log('yessss??');
+    var error = new BadgeError(scope, reason, details);
+    console.log('yay error!');
+    for (var i = 0; i < versions.length; i++) {
+      this.errors[versions[i]].push(error);
+      this.isValid[versions[i]] = false;
     }
   }
 }
@@ -84,6 +94,10 @@ class BadgeError {
     this.scope = scope || 'Unknown';
     this.reason = reason || 'No reason provided';
     this.details = details || '';
+  }
+
+  toMessage() {
+    return this.scope + ': ' + this.reason;
   }
 }
 
@@ -110,41 +124,47 @@ function isJson (str) {
 }
 
 function check (input, handleOutput) {
+  console.log(0);
   var assertion = new Assertion(input);
+  console.log(1);
   if (assertion.verifyUrl.length) {
+    console.log(2);
     fetchVerifyUrl(assertion.verifyUrl).then(function(response) {
+      console.log(3);
       if (response !== null && typeof response === 'object') {
+        console.log(3.1);
         assertion.isFetched = true;
+        console.log('3.1.1');
         assertion.body = response;
-        assertion.errors['0.5.0'] = validator.validateOldAssertion(assertion.body);
-        assertion.errors['1.0.0'] = validator.validateBadgeAssertion(assertion.body);
+        console.log('3.1.2');
+        for (var i = 0; i < SPEC_VERSIONS.length; i++) {
+          console.log('3.1.3.' + i);
+          console.log(SPEC_VERSIONS[i]);
+          console.log(validate[SPEC_VERSIONS[i]](assertion));
+          validate[SPEC_VERSIONS[i]](assertion);
+          console.log(debug(assertion));
+        }
+        console.log('3.1.4');
+        handleOutput.output(assertion);
       }
       else {
+        console.log(3.2);
         assertion.fail('Fetch', 'Not a valid JSON document.');
+        handleOutput.output(assertion);
       }
+      console.log(3.3);
+      
     }, function(error) {
+      console.log(4);
       assertion.fail('Fetch', error);
+      handleOutput.output(assertion);
     });
   }
   else {
+    console.log(5);
     assertion.fail('Raw input', 'Not a valid verifier URL');
+    handleOutput.output(assertion);
   }
-}
-
-function firstErrorMessage(errors) {
-  for (var property in errors) {
-    if (errors.hasOwnProperty(property)) {
-      return property + ': ' + errors[property];
-    }
-  }
-}
-
-function toCsvRow(columns) {
-  console.log('7');
-  while (columns.length < (SPEC_VERSIONS.length * 2) + 3) {
-    columns.push('');
-  }
-  console.log('"' + columns.join('","') + '"');
 }
 
 function debug(obj) {
@@ -155,10 +175,6 @@ interface OutputHandler {
   output(test: Assertion): void;
 }
 
-class ConsoleWriter {
-
-}
-
 class CsvWriter {
 
   constructor (public delimiter?: string, public enclosure?: string) {
@@ -167,18 +183,18 @@ class CsvWriter {
   }
 
   escapeCol(col) {
-      if(isNaN(col)) {
-          if (!col) {
-              col = '';
-          } else {
-              col = String(col);
-              if (col.length > 0) {
-                  col = col.split( this.enclosure ).join( this.enclosure + this.enclosure );
-                  col = this.enclosure + col + this.enclosure;
-              }
-          }
+    if(isNaN(col)) {
+      if (!col) {
+        col = '';
+      } else {
+        col = String(col);
+        if (col.length > 0) {
+          col = col.split( this.enclosure ).join( this.enclosure + this.enclosure );
+          col = this.enclosure + col + this.enclosure;
+        }
       }
-      return col;
+    }
+    return col;
   };
 
   output(assertion: Assertion) {
@@ -186,11 +202,11 @@ class CsvWriter {
   }
 
   toArray(assertion: Assertion) {
-    var values = [assertion.raw, assertion.body, assertion.fetchError];
+    var values = [assertion.raw, JSON.stringify(assertion.body), assertion.fetchError];
     for (var i = 0; i < SPEC_VERSIONS.length; i++) {
       var version = SPEC_VERSIONS[i];
       values.push((assertion.errors[version].length) ? 'FAIL' : 'OKAY');
-      values.push((assertion.errors[version].length) ? assertion.errors[version][0] : '');
+      values.push((assertion.errors[version].length) ? assertion.errors[version][0].toMessage() : '');
     }
     return values;
   }
