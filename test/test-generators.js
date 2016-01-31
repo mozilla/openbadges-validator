@@ -73,7 +73,77 @@ module.exports = {
       image: 'https://example.org/issuer-image',
       email: 'brian@example.org',
       revocationList: 'https://example.org/revocation-list'
-    }, replacements)
+    }, replacements);
+  },
+  '1.1.0-assertion': function (replacements) {
+    return replaceAll({
+      '@context': "https://w3id.org/openbadges/v1",
+      type: "Assertion",
+      id: "https://mydomain.org/assertion/50",
+      uid: 'd3c4ff',
+      recipient: {
+        identity: sha('brian@mozillafoundation.org', 'seasalt'),
+        salt: 'seasalt',
+        hashed: true,
+        type: 'email'
+      },
+      verify: {
+        type: 'hosted',
+        url: 'https://example.org/assertion'
+      },
+      badge: 'https://example.org/badge',
+      issuedOn: '2013-02-18T18:10+0500',
+      image: 'https://example.org/assertion-image',
+      evidence: 'https://example.org/evidence',
+      expires: '2014-02-18T18:10+0500',
+    }, replacements);
+  },
+  '1.1.0-badge': function (replacements) {
+    return replaceAll({
+      "@context": "https://w3id.org/openbadges/v1",
+      type: "BadgeClass",
+      id: "https://mydomain.org/badges/1",
+      name: 'Some Badge',
+      description: 'A short description of the badge',
+      image: 'https://example.org/badge-image',
+      criteria: 'https://example.org/criteria',
+      issuer: 'https://example.org/issuer',
+      alignment: [
+        { name: 'Standard One',
+          url: 'https://standards.example.org/1',
+          description: 'some standard'
+        },
+        { name: 'Standard Two',
+          url: 'https://standards.example.org/2',
+          description: 'some other standard'
+        },
+      ],
+      tags: [
+        'generic',
+        'badge',
+        'stuff'
+      ]
+    }, replacements);
+  },
+  '1.1.0-issuer': function (replacements) {
+    return replaceAll({
+      "@context": "https://w3id.org/openbadges/v1",
+      type: "Issuer",
+      id: "https://mydomain.org/issuer",
+      name: 'Some Issuer',
+      url: 'https://example.org',
+      description: 'We issue example badges.',
+      image: 'https://example.org/issuer-image',
+      email: 'brian@example.org',
+      revocationList: 'https://example.org/revocation-list'
+    }, replacements);
+  },
+  '1.1.0-extension': function (replacements) {
+    return replaceAll({
+      "@context": "https://openbadgespec.org/extensions/exampleExtension/context.json",
+      type: ["Extension", "extensions:ExampleExtension"],
+      exampleProperty: "I'm a property, short and sweet."
+    });
   }
 };
 
