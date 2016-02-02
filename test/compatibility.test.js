@@ -1,16 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const jws = require('jws');
 const test = require('tap').test;
 const validator = require('..');
 const nock = require('nock');
 const generators = require('./test-generators');
-const keys = require('./test-keys');
-const dataUrl = require('dataurl')
-
 var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
-var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
 
 test('0.5 is 0.5 compliant', function (t) {
   httpScope
