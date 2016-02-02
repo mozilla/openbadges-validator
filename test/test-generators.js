@@ -21,6 +21,28 @@ module.exports = {
       },
     }, replacements);
   },
+  '0.5.0-assertion' : function (replacements) {
+    return replaceAll({
+      recipient: sha('brian@mozillafoundation.org', 'seasalt'),
+      salt: 'seasalt',
+      evidence: '/evidence',
+      expires: '2013-06-06',
+      issued_on: '2013-01-01',
+      badge: {
+        version: '0.5.0',
+        criteria: '/criteria',
+        image: '/image',
+        name: 'Some Awesome Badge',
+        description: 'This is a description',
+        issuer: {
+          origin: 'https://example.org',
+          name: 'Example',
+          org: 'Organization',
+          contact: 'guy@example.org',
+        },
+      },
+    }, replacements);
+  },
   '1.0.0-assertion': function (replacements) {
     return replaceAll({
       uid: 'd3c4ff',
