@@ -100,6 +100,22 @@ function validateAssertion(assertion, prefix){
   return validateBadgeAssertion(assertion);
 }
 
+function validateAgainst(spec, assertion, callback) {
+  var errs = {};
+  switch (spec) {
+    case '0.5.0':
+      errs = validateOldAssertion(assertion);
+      break;
+    case '1.0.0':
+      errs = validateBadgeAssertion(assertion);
+      break
+    default:
+      errs.spec = 'Unknown specification';
+      break;
+  }
+  callback(errs);
+}
+
 function validateBadgeAssertion(assertion, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
@@ -725,3 +741,4 @@ validate.doesHashedEmailMatch = doesHashedEmailMatch;
 validate.VALID_HASHES = VALID_HASHES;
 validate.validateOldInterdependentFields = validateOldInterdependentFields;
 validate.validateInterdependentFields = validateInterdependentFields;
+validate.validateAgainst = validateAgainst;
