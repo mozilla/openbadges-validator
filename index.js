@@ -108,12 +108,58 @@ function validateAgainst(spec, assertion, callback) {
       break;
     case '1.0.0':
       errs = validateBadgeAssertion(assertion);
-      break
+      break;
+    case '1.1.0':
+      errs = validateBadgeAssertion(assertion);
+      if (errs === null) {
+        errs = validateAdditionalStructures(assertion);
+      }
+      break;
     default:
       errs.spec = 'Unknown specification';
       break;
   }
   callback(errs);
+}
+
+
+function validateAdditionalStructures(assertion) {
+  const errs = {};
+  const testOptional = makeOptionalValidator(errs);
+  const testRequired = makeRequiredValidator(errs);
+
+  testRequired(recipient['@context'], isIdentityType, {field: '@context'});
+  testRequired(recipient.type, isString, {field: 'type'});
+  testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+
+  if (testRequired(assertion.badge, isObject, {field: 'badge'})) {
+    testRequired(recipient['@context'], isIdentityType, {field: '@context'});
+    testRequired(recipient.type, isString, {field: 'type'});
+    testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+  }
+
+  if (testRequired(assertion.issuer, isObject, {field: 'issuer'})) {
+    testRequired(recipient['@context'], isIdentityType, {field: '@context'});
+    testRequired(recipient.type, isString, {field: 'type'});
+    testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+  }
+
+  // @TODO Handle extensions.
+  
+  // only test the internal properties of the `verify` property if it's
+  // actually an object.
+  if (testRequired(assertion.verify, isObject, {field: p('verify')})) {
+    testRequired(verify.type, isVerifyType, {field: p('verify.type')});
+    testRequired(verify.url, isAbsoluteUrl, {field: p('verify.url')});
+  }
+
+  testRequired(assertion.uid, isString, {field: p('uid')});
+  testRequired(assertion.badge, isAbsoluteUrl, {field: p('badge')});
+  testRequired(assertion.issuedOn, isUnixOrISOTime, {field: p('issuedOn')});
+  testOptional(assertion.expires, isUnixOrISOTime, {field: p('expires')});
+  testOptional(assertion.evidence, isAbsoluteUrl, {field: p('evidence')});
+  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: p('image')});
+  return objectIfKeys(errs);
 }
 
 function validateBadgeAssertion(assertion, prefix) {
