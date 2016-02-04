@@ -128,20 +128,20 @@ function validateAdditionalStructures(assertion) {
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  testRequired(recipient['@context'], isAbsoluteUrl, {field: '@context'});
-  testRequired(recipient.type, isString, {field: 'type'});
-  testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+  testRequired(assertion['@context'], isAbsoluteUrl, {field: '@context'});
+  testRequired(assertion.type, isString, {field: 'type'});
+  testRequired(assertion.id, isAbsoluteUrl, {field: 'id'});
 
   if (testRequired(assertion.badge, isObject, {field: 'badge'})) {
-    testRequired(recipient['@context'], isAbsoluteUrl, {field: '@context'});
-    testRequired(recipient.type, isString, {field: 'type'});
-    testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+    testRequired(assertion.badge['@context'], isAbsoluteUrl, {field: '@context'});
+    testRequired(assertion.badge.type, isString, {field: 'type'});
+    testRequired(assertion.badge.id, isAbsoluteUrl, {field: 'id'});
   }
 
   if (testRequired(assertion.issuer, isObject, {field: 'issuer'})) {
-    testRequired(recipient['@context'], isAbsoluteUrl, {field: '@context'});
-    testRequired(recipient.type, isString, {field: 'type'});
-    testRequired(recipient.id, isAbsoluteUrl, {field: 'id'});
+    testRequired(assertion.issuer['@context'], isAbsoluteUrl, {field: '@context'});
+    testRequired(assertion.issuer.type, isString, {field: 'type'});
+    testRequired(assertion.issuer.id, isAbsoluteUrl, {field: 'id'});
   }
 
   // @TODO Handle extensions.
