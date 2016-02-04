@@ -128,6 +128,8 @@ function validateAdditionalStructures(assertion) {
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
+  // @TODO Compare against expected values, not just types.
+
   testRequired(assertion['@context'], isAbsoluteUrl, {field: '@context'});
   testRequired(assertion.type, isString, {field: 'type'});
   testRequired(assertion.id, isAbsoluteUrl, {field: 'id'});
@@ -145,7 +147,7 @@ function validateAdditionalStructures(assertion) {
   }
 
   // @TODO Handle extensions.
-  
+
   return objectIfKeys(errs);
 }
 
