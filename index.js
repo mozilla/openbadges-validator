@@ -17,6 +17,10 @@ const VALID_IMAGES = [
   'image/svg+xml'
 ]
 
+const CONTEXT_IRI = {
+  '1.1.0': 'https://w3id.org/openbadges/v1'
+}
+
 function testValidImage(mime) {
   return VALID_IMAGES.indexOf(mime) !== -1
 }
@@ -84,6 +88,9 @@ function getAssertionGUID(urlOrSignature, callback) {
   });
 }
 
+// Structural validators
+//----------------------
+
 function isOldAssertion(assertion) {
   if (!assertion)
     return null;
@@ -110,10 +117,7 @@ function validateAgainst(spec, assertion, callback) {
       errs = validateBadgeAssertion(assertion);
       break;
     case '1.1.0':
-      errs = validateBadgeAssertion(assertion);
-      if (errs === null) {
-        errs = validateAdditionalStructures(assertion);
-      }
+      errs = validateAdditionalStructures(assertion);
       break;
     default:
       errs.spec = 'Unknown specification';
@@ -122,32 +126,51 @@ function validateAgainst(spec, assertion, callback) {
   callback(errs);
 }
 
-
 function validateAdditionalStructures(assertion) {
   const errs = {};
+  const recipient = assertion.recipient || {};
+  const verify = assertion.verify || {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
 
-  // @TODO Compare against expected values, not just types.
+  // only test the internals of the `recipient` property if it's
+  // actually an object.
+  if (testRequired(assertion.recipient, isObject, {field: 'recipient'})) {
+    testRequired(recipient.type, isIdentityType, {field: 'recipient.type'});
+    testRequired(recipient.identity, isString, {field: 'recipient.identity'});
+    testRequired(recipient.hashed, isBoolean, {field: 'recipient.hashed'});
+    testOptional(recipient.salt, isString, {field: 'recipient.salt'});
+  }
 
-  testRequired(assertion['@context'], isAbsoluteUrl, {field: '@context'});
+  // only test the internal properties of the `verify` property if it's
+  // actually an object.
+  if (testRequired(assertion.verify, isObject, {field: 'verify'})) {
+    testRequired(verify.type, isVerifyType, {field: 'verify.type'});
+    testRequired(verify.url, isAbsoluteUrl, {field: 'verify.url'});
+  }
+
+  testRequired(assertion.uid, isString, {field: 'uid'});
+  testRequired(assertion.issuedOn, isUnixOrISOTime, {field: 'issuedOn'});
+  testOptional(assertion.expires, isUnixOrISOTime, {field: 'expires'});
+  testOptional(assertion.evidence, isAbsoluteUrl, {field: 'evidence'});
+  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: 'image'});
+  testRequired(assertion['@context'], isContextIRI['1.1.0'], {field: '@context'});
   testRequired(assertion.type, isString, {field: 'type'});
   testRequired(assertion.id, isAbsoluteUrl, {field: 'id'});
 
   if (testRequired(assertion.badge, isObject, {field: 'badge'})) {
-    testRequired(assertion.badge['@context'], isAbsoluteUrl, {field: '@context'});
-    testRequired(assertion.badge.type, isString, {field: 'type'});
-    testRequired(assertion.badge.id, isAbsoluteUrl, {field: 'id'});
-  }
-
-  if (testRequired(assertion.issuer, isObject, {field: 'issuer'})) {
-    testRequired(assertion.issuer['@context'], isAbsoluteUrl, {field: '@context'});
-    testRequired(assertion.issuer.type, isString, {field: 'type'});
-    testRequired(assertion.issuer.id, isAbsoluteUrl, {field: 'id'});
+    testRequired(assertion.badge['@context'], isContextIRI['1.1.0'], {field: 'badge:@context'});
+    testRequired(assertion.badge.type, isString, {field: 'badge:type'});
+    testRequired(assertion.badge.id, isAbsoluteUrl, {field: 'badge:id'});
+  
+    if (testRequired(assertion.badge.issuer, isObject, {field: 'issuer'})) {
+      testRequired(assertion.badge.issuer['@context'], isContextIRI['1.1.0'], {field: 'badge:issuer:@context'});
+      testRequired(assertion.badge.issuer.type, isString, {field: 'badge:issuer:type'});
+      testRequired(assertion.badge.issuer.id, isAbsoluteUrl, {field: 'badge:issuer:id'});
+    }
   }
 
   // @TODO Handle extensions.
-
   return objectIfKeys(errs);
 }
 
@@ -260,6 +283,9 @@ function validateOldAssertion(assertion, prefix) {
 
   return objectIfKeys(errs);
 };
+
+// IO & transformation
+//--------------------
 
 function clone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -443,7 +469,6 @@ function unpackJWS(signature, callback) {
   return callback(null, payload)
 }
 
-
 function checkRevoked(list, assertion) {
   var msg;
   if (!list) return;
@@ -451,6 +476,7 @@ function checkRevoked(list, assertion) {
     return makeError('verify-revoked', msg);
 }
 
+// Fully validate a hosted 0.5 badge
 function fullValidateOldAssertion(assertion, callback, originalUrl) {
   const structuralErrors = validateAssertion(assertion);
   if (structuralErrors)
@@ -471,6 +497,7 @@ function fullValidateOldAssertion(assertion, callback, originalUrl) {
   });
 }
 
+// Fully validate a hosted 1.0 badge
 function fullValidateBadgeAssertion(assertion, callback) {
   const data = {version: '1.0.0', guid: hostedAssertionGUID(assertion)};
   async.waterfall([
@@ -497,6 +524,7 @@ function fullValidateBadgeAssertion(assertion, callback) {
   });
 };
 
+// Fully validate a signed 1.0 badge
 function fullValidateSignedAssertion(signature, callback) {
   const data = {version: '1.0.0', signature: signature};
   async.waterfall([
@@ -588,9 +616,21 @@ function regexToValidator(format, message) {
   });
 }
 
+function stringToValidator(compare) {
+  return makeValidator({
+    message: 'must equal "' + compare + '"',
+    fn: function (thing) {
+      return typeof thing === 'string' && thing === compare;
+    }
+  });
+}
+
 function getInternalClass(thing) {
   return Object.prototype.toString.call(thing);
 }
+
+// Validation functions
+// --------------------
 
 const isUrl = regexToValidator(re.url, 'must be a URL');
 const isAbsoluteUrl = regexToValidator(re.absoluteUrl, 'must be an absolute URL');
@@ -601,6 +641,9 @@ const isDateString = regexToValidator(re.date, 'must be a unix timestamp or stri
 const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
 const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
+const isContextIRI = {
+  '1.1.0': stringToValidator(CONTEXT_IRI['1.1.0']),
+};
 const isEmailOrHash = makeValidator({
   message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
   fn: function isEmailOrHash(thing) {
@@ -722,6 +765,9 @@ function makeRequiredValidator(errors) {
     return true;
   }
 }
+
+// Interdependent fields
+// ---------------------
 
 function validateOldInterdependentFields(info, cb) {
   var assertion = info.structures.assertion;

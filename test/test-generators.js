@@ -1,5 +1,6 @@
-const CONTEXT_IRI = 'https://w3id.org/openbadges/v1';
-
+const CONTEXT_IRI = {
+  '1.1.0': 'https://w3id.org/openbadges/v1'
+}
 module.exports = {
   '0.5.0' : function (replacements) {
     return replaceAll({
@@ -79,7 +80,7 @@ module.exports = {
   },
   '1.1.0-assertion': function (replacements) {
     return replaceAll({
-      '@context': CONTEXT_IRI,
+      '@context': CONTEXT_IRI['1.1.0'],
       type: 'Assertion',
       id: 'https://example.org/assertion/1',
       uid: 'd3c4ff',
@@ -102,9 +103,9 @@ module.exports = {
   },
   '1.1.0-badge': function (replacements) {
     return replaceAll({
-      '@context': CONTEXT_IRI,
+      '@context': CONTEXT_IRI['1.1.0'],
       type: 'BadgeClass',
-      id: 'https://example.org/badgeclass/1',
+      id: 'https://example.org/badge',
       name: 'Some Badge',
       description: 'A short description of the badge',
       image: 'https://example.org/badge-image',
@@ -129,9 +130,9 @@ module.exports = {
   },
   '1.1.0-issuer': function (replacements) {
     return replaceAll({
-      '@context': CONTEXT_IRI,
+      '@context': CONTEXT_IRI['1.1.0'],
       type: 'Issuer',
-      id: 'https://mydomain.org/issuer/1',
+      id: 'https://example.org/issuer',
       name: 'Some Issuer',
       url: 'https://example.org',
       description: 'We issue example badges.',
