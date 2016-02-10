@@ -313,7 +313,7 @@ function getLinkedResources(structures, callback) {
     },
     'issuer.image': { required: false },
     'issuer.revocationList': {
-      required: false,
+      required: structures.assertion.verify.type === 'signed',
       json: true
     }
   }, hollaback);
