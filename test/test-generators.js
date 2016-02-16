@@ -12,7 +12,7 @@ module.exports = {
       badge: {
         version: '0.5.0',
         criteria: '/criteria',
-        image: '/image',
+        image: 'https://example.org/image',
         name: 'Some Awesome Badge',
         description: 'This is a description',
         issuer: {

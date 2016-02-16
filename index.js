@@ -174,6 +174,40 @@ function validateAdditionalStructures(assertion) {
   return objectIfKeys(errs);
 }
 
+function validateBadgeAssertionOld(assertion, prefix) {
+  function p(str) { return ((prefix&&prefix+':')||'')+str }
+
+  const errs = {};
+  const recipient = assertion.recipient || {};
+  const verify = assertion.verify || {};
+  const testOptional = makeOptionalValidator(errs);
+  const testRequired = makeRequiredValidator(errs);
+
+  // only test the internals of the `recipient` property if it's
+  // actually an object.
+  if (testRequired(assertion.recipient, isObject, {field: p('recipient')})) {
+    testRequired(recipient.type, isIdentityType, {field: p('recipient.type')});
+    testRequired(recipient.identity, isString, {field: p('recipient.identity')});
+    testRequired(recipient.hashed, isBoolean, {field: p('recipient.hashed')});
+    testOptional(recipient.salt, isString, {field: p('recipient.salt')});
+  }
+
+  // only test the internal properties of the `verify` property if it's
+  // actually an object.
+  if (testRequired(assertion.verify, isObject, {field: p('verify')})) {
+    testRequired(verify.type, isVerifyType, {field: p('verify.type')});
+    testRequired(verify.url, isAbsoluteUrl, {field: p('verify.url')});
+  }
+
+  testRequired(assertion.uid, isString, {field: p('uid')});
+  testRequired(assertion.badge, isAbsoluteUrl, {field: p('badge')});
+  testRequired(assertion.issuedOn, isUnixOrISOTime, {field: p('issuedOn')});
+  testOptional(assertion.expires, isUnixOrISOTime, {field: p('expires')});
+  testOptional(assertion.evidence, isAbsoluteUrl, {field: p('evidence')});
+  testOptional(assertion.image, isAbsoluteUrlOrDataURI, {field: p('image')});
+  return objectIfKeys(errs);
+}
+
 function validateBadgeAssertion(assertion, prefix) {
   function p(str) { return ((prefix&&prefix+':')||'')+str }
 
@@ -429,7 +463,7 @@ function validateSigned(input, callback) {
   return callback(makeError('input', 'not a valid signed badge', { input: input }));
 }
 
-function validate(input, callback) {
+function validateOrig(input, callback) {
   const errs = [];
   if (isObject(input)) {
     return validate.validateHosted(input, callback);
@@ -476,6 +510,9 @@ function checkRevoked(list, assertion) {
     return makeError('verify-revoked', msg);
 }
 
+// Top-level validation control flow
+//----------------------------------
+
 // Fully validate a hosted 0.5 badge
 function fullValidateOldAssertion(assertion, callback, originalUrl) {
   const structuralErrors = validateAssertion(assertion);
@@ -497,8 +534,9 @@ function fullValidateOldAssertion(assertion, callback, originalUrl) {
   });
 }
 
+// @FIXME Update to include all tests
 // Fully validate a hosted 1.0 badge
-function fullValidateBadgeAssertion(assertion, callback) {
+function fullValidateBadgeAssertionOrig(assertion, callback) {
   const data = {version: '1.0.0', guid: hostedAssertionGUID(assertion)};
   async.waterfall([
     getLinkedStructures.bind(null, assertion),
@@ -523,6 +561,294 @@ function fullValidateBadgeAssertion(assertion, callback) {
     callback(errs, data);
   });
 };
+
+// async.auto() tasks
+//-------------------
+// Auto task callbacks receives two arguments:
+// - (1) a callback(err, result) which must be called when finished,
+//       passing an error (which can be null) and the result of the function's execution, and
+// - (2) a results object, containing the results of the previously executed functions
+//       assigned as properties according to the task property name.
+
+function parseVersion(assertion) {
+  if (!isObject(assertion)) {
+    return false;
+  }
+  var version = '1.1.0';
+  if (!assertion['@context'] || !assertion.id || !assertion.type) {
+    version = '1.0.0';
+  }
+  if (isObject(assertion.badge) || !assertion.verify) {
+    version = '0.5.0';
+  }
+  return version;
+}
+
+function parseInput(next, data) {
+  function callback(assertion, type) {
+    var version = parseVersion(assertion);
+    if (!version) {
+      return next(makeError('assertion', 'does not look like any known specification version.', {data: data}));
+    }
+    return next(null, {
+      version: version,
+      type: type,
+      scheme: [version, type].join('-'),
+      assertion: assertion
+    })
+  }
+  var type = data.raw.type;
+  var input = data.raw.input;
+  var version = data.raw.version;
+  if (isObject(input)) {
+    return callback(input, 'hosted');
+  }
+  else if (typeof input === 'string') {
+    if (isSignedBadge(input)) {
+      if (type === 'hosted') {
+        return next(makeError('verify-type-mismatch', 'when `verify.type` is "hosted", a url or assertion object is required, received JWS signature', { input: input }));
+      }
+      return callback(unpackJWS.bind(null, input), 'signed');
+    }
+    if (isUrl(input)) {
+      resources.getUrl({url: input, json: true, required: true}, function(ex, result) {
+        if (result.error) {
+          result.error.field = 'assertion';
+          return next(result.error);
+        }
+        else {
+          var assertion = result.body;
+          if (isJson(assertion)) {
+            assertion = JSON.parse(assertion);
+          }
+          if (!isObject(assertion)) {
+            return next(makeError('fetch', 'not a valid hosted badge', { parse: parse }));
+          }
+          if (type === 'signed') {
+            next(makeError('verify-type-mismatch', 'when `verify.type` is "signed", a signature string is expected, not the assertion object', { input: input }));
+          }
+          return callback(assertion, 'hosted');
+        }
+      });
+    }
+    else {
+      next(makeError('input', 'not a valid signed badge or url', { input: input }));
+    }
+  }
+  else {
+    next(makeError('input', 'input must be a string or object', { input: input }));
+  }
+}
+
+function taskGetGUID(data) {
+  if (data.parse.version === '0.5.0') {
+    return null;
+  }
+  return hostedAssertionGUID(data.assertion);
+}
+
+function taskGetLinkedObject(url, field, callback) {
+  function err(field, error) { error.field = field; return error }
+  resources.getUrl({url: url, json: true, required: true}, function (ex, result) {
+    if (result.error)
+      return callback(err(field, result.error));
+    return callback(null, result.body);
+  });
+}
+
+function taskGetBadgeClass(next, data) {
+  if (data.parse.version === '0.5.0') {
+    if (!isObject(data.assertion.badge)) {
+      return next(makeError('badgeClass', 'expected object', { badge: data.assertion.badge }));
+    }
+    return next(null, data.assertion.badge);
+  }
+  else {
+    return taskGetLinkedObject(data.assertion.badge, 'badge', next);
+  }
+}
+
+function taskGetIssuer(next, data) {
+  if (data.parse.version === '0.5.0') {
+    if (!isObject(data.badge.issuer)) {
+      return next(makeError('issuer', 'expected object', { issuer: data.badge.issuer }));
+    }
+    return next(null, data.badge.issuer);
+  }
+  else {
+    return taskGetLinkedObject(data.badge.issuer, 'issuer', next);
+  }
+}
+
+function taskValidateRecipient(next, data) {
+  const errs = {};
+  const testRequired = makeRequiredValidator(errs);
+  const testOptional = makeOptionalValidator(errs);
+  if (data.parse.version == '0.5.0') {
+    var validityRule = data.assertion.hasOwnProperty('salt') ? isHash : isEmailOrHash;
+    testRequired(data.assertion.recipient, validityRule, {field: 'recipient'});
+  }
+  else {
+    var recipient = data.assertion.recipient;
+    if (recipient.hashed) {
+      testRequired(recipient.identity, isHash, {field: 'recipient.identity'});
+      testOptional(recipient.salt, isString, {field: 'recipient.salt'});
+    } else {
+      if (recipient.type == "email") {
+        testRequired(recipient.identity, isEmail, {field: 'recipient.identity'});
+      }
+    }
+  }
+  next(objectIfKeys(errs), true);
+}
+
+function taskValidateStructures(next, data) {
+  const errMsg = 'invalid assertion structure';
+  const errors = {
+    assertion: validateAssertion(data.assertion)
+  }
+  if (data.parse.version !== '0.5.0') {
+    errors.badge = validateBadgeClass(data.badge);
+    errors.issuer = validateIssuerOrganization(data.issuer);
+  }
+  if (errors.assertion || errors.badge || errors.issuer) {
+    return next(makeError('structure', errMsg, removeNulls(errors)));
+  }
+  return next(null, true);
+}
+
+function taskCheckResources(next, data) {
+  const schemes = {
+    '0.5.0-hosted': {
+      resources: {
+        'badge.image': {
+          required: true,
+          'content-type': VALID_IMAGES,
+        }
+      }
+    },
+    '1.0.0-hosted': {
+      resources: {
+        'assertion.image': {
+          required: false,
+          'content-type': VALID_IMAGES,
+        },
+        'assertion.verify.url': {
+          required: true,
+          json: true
+        },
+        'badge.image': {
+          required: true,
+          'content-type': VALID_IMAGES
+        },
+        'issuer.image': { required: false },
+        'issuer.revocationList': {
+          required: false,
+          json: true
+        }
+      },
+    },
+    '1.0.0-signed': {
+      resources: {
+        'assertion.image': {
+          required: false,
+          'content-type': VALID_IMAGES,
+        },
+        'assertion.verify.url': {
+          required: true,
+          json: false
+        },
+        'badge.image': {
+          required: true,
+          'content-type': VALID_IMAGES
+        },
+        'issuer.image': { required: false },
+        'issuer.revocationList': {
+          required: false,
+          json: true
+        }
+      }
+    }
+  }
+  var scheme = data.parse.scheme;
+  return resources(data, schemes[scheme].resources, function (err, result) {
+    const errMsg = 'could not validate linked resources';
+    if (err) {
+      return next(makeError('resources', errMsg, err));
+    }
+    return next(null, result);
+  });
+}
+
+function taskCheckDeepEqual(next, data) {
+  if (data.parse.version === '0.5.0') {
+    return next(null, true);
+  }
+  const hostedAssertion = data.resources['assertion.verify.url'];
+  const localAssertion = data.assertion;
+  if (!deepEqual(hostedAssertion, localAssertion))
+    return next(makeError('verify-hosted-deep-equal', 'Remote assertion must match local assertion', {
+      local: localAssertion,
+      hosted: hostedAssertion
+    }));
+  return next(null, true);
+}
+
+// Only params callback and input required.
+function fullValidateBadgeAssertion(callback, input, version, type) {
+  async.auto({
+    // Store raw input values for ;ater comparison.
+    raw: function (next) { next(null, {input: input, version: version, type: type}); },
+    // Fetch assertion if input is URL, determine version and type (hosted or signed).
+    parse: ['raw', function (next, data) {
+      parseInput(next, data);
+    }],
+    // Sugar: move assertion to `data.assertion`.
+    assertion: ['parse', function (next, data) {
+      next(null, data.parse.assertion);
+    }],
+    // Generate GUID for assertion.
+    guid: ['assertion', function (next, data) {
+      next(null, taskGetGUID(data));
+    }],
+    // Fetch remote value or assign local value to `data.badge` and `data.issuer`.
+    badge: ['assertion', function (next, data) {
+      taskGetBadgeClass(next, data);
+    }],
+    issuer: ['badge', function (next, data) {
+      taskGetIssuer(next, data);
+    }],
+    // Verify recipient hashed correctly or is a well-formed email address.
+    recipient: ['issuer', function(next, data) {
+      taskValidateRecipient(next, data);
+    }],
+    // Apply validation rules to assertion, badgeclass and issuer.
+    objects: ['issuer', function (next, data) {
+      taskValidateStructures(next, data);
+    }],
+    // Fetch and verify remote resources: images, evidence, criteria & revocationList.
+    resources: ['issuer', function(next, data) {
+      taskCheckResources(next, data);
+    }],
+    // Verify hosted and local assertion match exactly.
+    deep_equal: ['resources', function (next, data) {
+      taskCheckDeepEqual(next, data);
+    }]
+  }, callback);
+}
+
+function isJson(str) {
+  try {
+      JSON.parse(str);
+  } catch (e) {
+      return false;
+  }
+  return true;
+}
+
+function validate(input, callback, version, type) {
+  return fullValidateBadgeAssertion(callback, input, version, type);
+}
 
 // Fully validate a signed 1.0 badge
 function fullValidateSignedAssertion(signature, callback) {
