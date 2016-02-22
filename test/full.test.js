@@ -12,7 +12,10 @@ var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
 var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
 
-test('validate, signed', function (t) {
+// 1.0.0 (Signed) Success
+//-----------------------
+
+test('1.0.0 signed validation', function (t) {
   const assertion = generators['1.0.0-assertion']({
     verify: {
       type: 'signed',
@@ -39,14 +42,17 @@ test('validate, signed', function (t) {
   });
   validator(signature, function (err, data) {
     t.notOk(err, 'no errors');
-    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
-    t.same(data.signature, signature);
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid), 'Well-formed GUID');
+    t.same(data.raw.input, signature);
     t.same(str(data.resources['badge.image']), 'badge-image');
     t.end();
   });
 });
 
-test('validate, signed: missing badge criteria', function (t) {
+// 1.0.0 (Signed) Failure
+//-----------------------
+
+test('1.0.0 signed validation fail: missing badge criteria', function (t) {
   const assertion = generators['1.0.0-assertion']({
     verify: {
       type: 'signed',
@@ -78,7 +84,10 @@ test('validate, signed: missing badge criteria', function (t) {
   });
 });
 
-test('validate, new hosted', function (t) {
+// 1.0.0 (Hosted) Success
+//-----------------------
+
+test('1.0.0 hosted validation', function (t) {
   const assertion = generators['1.0.0-assertion']();
   const badge = generators['1.0.0-badge']();
   const issuer = generators['1.0.0-issuer']();
@@ -95,12 +104,13 @@ test('validate, new hosted', function (t) {
     .get('/revocation-list').reply(200, '{"found":true}')
   validator(assertion, function (err, data) {
     t.notOk(err, 'should have no errors');
-    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
+    t.same(data.parse.version, '1.0.0');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid), 'Well-formed GUID');
     t.end();
   });
 });
 
-test('validate, new hosted by url', function (t) {
+test('1.0.0 hosted validation by url', function (t) {
   const assertion = generators['1.0.0-assertion']();
   const badge = generators['1.0.0-badge']();
   const issuer = generators['1.0.0-issuer']();
@@ -118,12 +128,13 @@ test('validate, new hosted by url', function (t) {
     .get('/revocation-list').reply(200, '{"found":true}')
   validator(ORIGIN + '/assertion', function (err, data) {
     t.notOk(err, 'should have no errors');
-    t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
+    t.same(data.parse.version, '1.0.0');
+    t.ok(/^[A-Za-z0-9]+$/.test(data.guid), 'Well-formed GUID');
     t.end();
   });
 });
 
-test('validate, new hosted by url with dataURI image', function (t) {
+test('1.0.0 hosted validation by url with dataURI image', function (t) {
   const assertion = generators['1.0.0-assertion']({
     image: dataUrl.convert({
       data: imageData,
@@ -148,9 +159,12 @@ test('validate, new hosted by url with dataURI image', function (t) {
     t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.end();
   });
-})
+});
 
-test('validate, new, passed object when should pass signature', function (t) {
+// 1.0.0 (Hosted) Failure
+//-----------------------
+
+test('1.0.0 hosted validation fail: passed object when should pass signature', function (t) {
   const assertion = generators['1.0.0-assertion']({'verify.type': 'signed'});
   validator(assertion, function (err, data) {
     t.same(err.code, 'verify-type-mismatch');
@@ -158,7 +172,7 @@ test('validate, new, passed object when should pass signature', function (t) {
   });
 });
 
-test('validate, new hosted, invalid', function (t) {
+test('1.0.0 hosted validation fail: hosted assertion different', function (t) {
   const assertion = generators['1.0.0-assertion']();
   const wrongAssertion = generators['1.0.0-assertion']({
     'evidence': 'https://example.org/some-other-thing'
@@ -177,12 +191,15 @@ test('validate, new hosted, invalid', function (t) {
     .get('/criteria').reply(200, 'criteria')
     .get('/revocation-list').reply(200, '{"found":true}')
   validator(assertion, function (err, data) {
-    t.same(err.code, 'verify-hosted');
+    t.same(err.code, 'deep-equal');
     t.end();
   });
 });
 
-test('validate, old style', function (t) {
+// 0.5.0 Success
+//--------------
+
+test('0.5.0 validation', function (t) {
   httpScope
     .get('/').reply(200, 'root')
     .get('/image').reply(200, 'image', {'content-type': 'image/png'})
@@ -192,15 +209,13 @@ test('validate, old style', function (t) {
   const originalCriteria = assertion.badge.criteria;
   validator(assertion, function (err, data) {
     t.notOk(err, 'no errors');
-    t.same(data.version, '0.5.0');
-    t.same(data.structures.assertion.badge, data.structures.badge);
-    t.same(data.structures.badge.criteria, originalCriteria);
-    t.equal(data.guid, null);
+    t.same(data.parse.version, '0.5.0');
+    t.same(data.badge.criteria, originalCriteria);
     t.end();
   });
 });
 
-test('validate, old style by url', function (t) {
+test('0.5.0 validation by url', function (t) {
   const assertion = generators['0.5.0']();
   httpScope
     .get('/').reply(200, 'root')
@@ -211,35 +226,42 @@ test('validate, old style by url', function (t) {
   const originalCriteria = assertion.badge.criteria;
   validator(ORIGIN + '/assertion', function (err, data) {
     t.notOk(err, 'no errors');
-    t.same(data.version, '0.5.0');
-    t.same(data.structures.assertion.badge, data.structures.badge);
-    t.same(data.structures.badge.criteria, originalCriteria);
+    t.same(data.parse.version, '0.5.0');
+    t.same(data.badge.criteria, originalCriteria);
     t.ok(/^[A-Za-z0-9]+$/.test(data.guid));
     t.end();
   });
 });
 
-test('validate, old style: invalid structure', function (t) {
+// 0.5.0 Failure
+//--------------
+
+test('0.5.0 validation fail: invalid structure', function (t) {
+  httpScope
+    .get('/').reply(200, 'root')
+    .get('/image').reply(200, 'image', {'content-type': 'image/png'})
+    .get('/evidence').reply(200, 'evidence')
+    .get('/criteria').reply(200, 'criteria')
   const assertion = generators['0.5.0']({'badge.criteria': null});
   validator(assertion, function (err, data) {
     t.same(err.code, 'structure');
-    t.ok(err.extra['badge.criteria'], 'should be a criteria error');
+    t.ok(err.extra.assertion['badge.criteria'], 'should be a criteria error');
     t.end();
   });
 });
 
-test('validate, old style by url: invalid structure', function (t) {
+test('0.5.0 validation by url fail: invalid structure', function (t) {
   const assertion = generators['0.5.0']({'badge.criteria': null});
   httpScope
     .get('/assertion').reply(200, assertion)
   validator(ORIGIN + '/assertion', function (err, data) {
     t.same(err.code, 'structure');
-    t.ok(err.extra['badge.criteria'], 'should be a criteria error');
+    t.ok(err.extra.assertion['badge.criteria'], 'should be a criteria error');
     t.end();
   });
 });
 
-test('validate by url: assertion unreachable', function (t) {
+test('0.5.0 validation by url fail: assertion unreachable', function (t) {
   const assertion = generators['0.5.0']();
   httpScope
     .get('/assertion').reply(404);
@@ -249,6 +271,9 @@ test('validate by url: assertion unreachable', function (t) {
     t.end();
   });
 });
+
+// Other
+//------
 
 test('validateHosted: string arg', function(t) {
   const signature = jws.sign({

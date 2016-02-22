@@ -601,6 +601,9 @@ function parseInput(next, data) {
   var input = data.raw.input;
   var version = data.raw.version;
   if (isObject(input)) {
+    if (typeof input.verify !== 'undefined' && input.verify.type !== 'undefined' && input.verify.type !== 'hosted') {
+      return next(makeError('verify-type-mismatch', 'when `verify.type` is "signed", a JWS signature is expected', { input: input }));
+    }
     return callback(input, 'hosted');
   }
   else if (typeof input === 'string') {
@@ -608,7 +611,11 @@ function parseInput(next, data) {
       if (type === 'hosted') {
         return next(makeError('verify-type-mismatch', 'when `verify.type` is "hosted", a url or assertion object is required, received JWS signature', { input: input }));
       }
-      return callback(unpackJWS.bind(null, input), 'signed');
+      const decoded = jws.decode(input);
+      if (!decoded) {
+        return next(makeError('jws-decode', 'Unable to decode JWS signature', { input: input }));
+      }
+      return callback(jsonParse(decoded.payload), 'signed');
     }
     if (isUrl(input)) {
       resources.getUrl({url: input, json: true, required: true}, function(ex, result) {
@@ -782,12 +789,15 @@ function taskCheckResources(next, data) {
 
 function taskCheckDeepEqual(next, data) {
   if (data.parse.version === '0.5.0') {
-    return next(null, true);
+    return next(null, 'Deep equal not required prior to 1.0.0');
+  }
+  if (data.parse.type == 'signed') {
+    return next(null, 'Deep equal not required for signed badges.');    
   }
   const hostedAssertion = data.resources['assertion.verify.url'];
   const localAssertion = data.assertion;
   if (!deepEqual(hostedAssertion, localAssertion))
-    return next(makeError('verify-hosted-deep-equal', 'Remote assertion must match local assertion', {
+    return next(makeError('deep-equal', 'Remote assertion must match local assertion', {
       local: localAssertion,
       hosted: hostedAssertion
     }));
@@ -795,11 +805,11 @@ function taskCheckDeepEqual(next, data) {
 }
 
 // Only params callback and input required.
-function fullValidateBadgeAssertion(callback, input, version, type) {
+function fullValidateBadgeAssertion(callback, input, version, verifyType) {
   async.auto({
     // Store raw input values for ;ater comparison.
-    raw: function (next) { next(null, {input: input, version: version, type: type}); },
-    // Fetch assertion if input is URL, determine version and type (hosted or signed).
+    raw: function (next) { next(null, {input: input, version: version, type: verifyType}); },
+    // Fetch assertion if input is URL, determine version and verify type (hosted or signed).
     parse: ['raw', function (next, data) {
       parseInput(next, data);
     }],
@@ -846,8 +856,8 @@ function isJson(str) {
   return true;
 }
 
-function validate(input, callback, version, type) {
-  return fullValidateBadgeAssertion(callback, input, version, type);
+function validate(input, callback, version, verifyType) {
+  return fullValidateBadgeAssertion(callback, input, version, verifyType);
 }
 
 // Fully validate a signed 1.0 badge
