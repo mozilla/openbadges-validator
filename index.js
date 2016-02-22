@@ -666,7 +666,7 @@ function taskGetLinkedObject(url, field, callback) {
 function taskGetBadgeClass(next, data) {
   if (data.parse.version === '0.5.0') {
     if (!isObject(data.assertion.badge)) {
-      return next(makeError('badgeClass', 'expected object', { badge: data.assertion.badge }));
+      return next(makeError('input', 'expected object', { badge: data.assertion.badge }));
     }
     return next(null, data.assertion.badge);
   }
@@ -693,12 +693,12 @@ function taskValidateRecipient(next, data) {
   const testOptional = makeOptionalValidator(errs);
   if (data.parse.version == '0.5.0') {
     var validityRule = data.assertion.hasOwnProperty('salt') ? isHash : isEmailOrHash;
-    testRequired(data.assertion.recipient, validityRule, {field: 'recipient'});
+    testRequired(data.assertion.recipient, validityRule, {field: 'recipient', 'code': 'structure'});
   }
   else {
     var recipient = data.assertion.recipient;
     if (recipient.hashed) {
-      testRequired(recipient.identity, isHash, {field: 'recipient.identity'});
+      testRequired(recipient.identity, isHash, {field: 'recipient.identity', 'code': 'structure'});
       testOptional(recipient.salt, isString, {field: 'recipient.salt'});
     } else {
       if (recipient.type == "email") {
