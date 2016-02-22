@@ -471,7 +471,7 @@ test('validateSigned', function (t) {
 });
 
 test('validate', function(t) {
-
+  
   t.test('input error', function (t) {
     t.test('non-string, non-object argument', function(t) {
       validator(5, function(err, data) {
@@ -486,38 +486,6 @@ test('validate', function(t) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
-        t.end();
-      });
-    });
-  });
-
-  t.test('delegation', function (t) {
-    t.test('delegates to validateHosted', function (t) {
-      sinon.stub(validator, 'validateHosted').callsArgWith(1, null, 'ok');
-      validator({}, function(err, data) {
-        t.ok(validator.validateHosted.called, 'calls validateHosted');
-        validator.validateHosted.restore();
-        t.end();
-      });
-    });
-    t.test('delegates to validateHostedUrl', function (t) {
-      sinon.stub(validator, 'validateHostedUrl').callsArgWith(1, null, 'ok');
-      validator('http://whereever.com/assertion', function(err, data) {
-        t.ok(validator.validateHostedUrl.called, 'calls validateHostedUrl');
-        validator.validateHostedUrl.restore();
-        t.end();
-      });
-    });
-    t.test('delegates to validateSigned', function (t) {
-      sinon.stub(validator, 'validateSigned').callsArgWith(1, null, 'ok');
-      const signature = jws.sign({
-        header: { alg: 'HS256' },
-        payload: { recipient: 'yup' },
-        privateKey: keys.private
-      });
-      validator(signature, function(err, data) {
-        t.ok(validator.validateSigned.called, 'calls validateSigned');
-        validator.validateSigned.restore();
         t.end();
       });
     });
