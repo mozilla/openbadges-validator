@@ -92,9 +92,9 @@ module.exports = {
       },
       verify: {
         type: 'hosted',
-        url: 'https://example.org/assertion'
+        url: 'https://example.org/1.1/assertion'
       },
-      badge: 'https://example.org/badge',
+      badge: 'https://example.org/1.1/badge',
       issuedOn: '2013-02-18T18:10+0500',
       image: 'https://example.org/assertion-image',
       evidence: 'https://example.org/evidence',
@@ -110,7 +110,7 @@ module.exports = {
       description: 'A short description of the badge',
       image: 'https://example.org/badge-image',
       criteria: 'https://example.org/criteria',
-      issuer: 'https://example.org/issuer',
+      issuer: 'https://example.org/1.1/issuer',
       alignment: [
         { name: 'Standard One',
           url: 'https://standards.example.org/1',
