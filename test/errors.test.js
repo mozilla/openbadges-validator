@@ -35,10 +35,6 @@ test('validateHosted', function (t) {
       .get('/criteria').reply(200, 'criteria')
       .get('/revocation-list').reply(200, '{"found":true}')
     validator(assertion, function(err, data) {
-            console.log('ERR');
-        console.log(err);
-        console.log('DATA');
-        console.log(data);
       t.ok(err, 'should have error');
       t.same(err['recipient.identity']['code'], 'structure');
       t.ok(err['recipient.identity']['message'], 'has message');
@@ -146,7 +142,6 @@ test('validateHosted', function (t) {
         .get('/image').reply(404);
       const assertion = generators['0.5.0']();
       validator(assertion, function(err, data) {
-        console.log(err);
         t.ok(err, 'should have error');
         t.same(err.code, 'resources');
         t.ok(err.message, 'has message');
