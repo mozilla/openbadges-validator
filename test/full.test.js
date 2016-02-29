@@ -246,6 +246,12 @@ test('0.5.0 validation fail: invalid structure', function (t) {
   validator(assertion, function (err, data) {
     t.same(err.code, 'structure');
     t.ok(err.extra.assertion['badge.criteria'], 'should be a criteria error');
+        console.log('###############');
+    console.log('ERRORS')
+    console.log(err);
+    console.log('DATA');
+    console.log(data);
+    console.log('###############');
     t.end();
   });
 });
