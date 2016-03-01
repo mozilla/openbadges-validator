@@ -81,12 +81,14 @@ function testValidImage(mime) {
 
 var sha256 = hashedString.bind(null, 'sha256');
 
+// @FIXME this function is never called in any validation scenario.
 function hashedString(algorithm, str) {
   var hash = crypto.createHash(algorithm);
   hash.update(str);
   return hash.digest('hex');
 }
 
+// @FIXME this function is never called in any validation scenario.
 function doesHashedEmailMatch(hashedEmail, salt, email) {
   if (!salt)
     salt = '';
@@ -97,21 +99,19 @@ function doesHashedEmailMatch(hashedEmail, salt, email) {
   return hashedString(algorithm, email + salt) == hash;
 }
 
+// @FIXME this function is never called in any validation scenario.
 function doesRecipientMatch(info, identity) {
   var assertion = info.structures.assertion;
   if (info.version == "0.5.0") {
     if (isHash(assertion.recipient))
-      return doesHashedEmailMatch(assertion.recipient, assertion.salt,
-                                  identity);
+      return doesHashedEmailMatch(assertion.recipient, assertion.salt, identity);
     else
       return assertion.recipient == identity;
   } else {
     if (assertion.recipient.type != "email")
       return false;
     if (assertion.recipient.hashed)
-      return doesHashedEmailMatch(assertion.recipient.identity,
-                                  assertion.recipient.salt,
-                                  identity);
+      return doesHashedEmailMatch(assertion.recipient.identity, assertion.recipient.salt, identity);
     return assertion.recipient.identity == identity;
   }
 }
@@ -145,39 +145,6 @@ function getAssertionGUID(urlOrSignature, callback) {
     return callback(null, signedAssertionToGUID(payload));
   });
 }
-
-function validateBadgeClass(badge, version, prefix) {
-  prefix = prefix || '';
-  var tests = [{
-    object: badge,
-    prefix: prefix,
-    required: {name: isString, description: isString, image: isAbsoluteUrlOrDataURI, criteria: isAbsoluteUrl, issuer: isAbsoluteUrl},
-    optional: {tags: isArray(isString), alignment: isArray(isValidAlignmentStructure)}
-  }];
-  if (version == '1.1.0') {
-    tests.push({
-      object: badge,
-      required: {'@context': isContextIRI['1.1.0'], type: isString, id: isAbsoluteUrl}
-    });
-  }
-  
-  return runTests(tests);
-}
-
-function validateIssuerOrganization(issuer, version) {
-  var tests = [{
-    object: issuer,
-    required: {name: isString, url: isAbsoluteUrl},
-    optional: {description: isString, image: isAbsoluteUrlOrDataURI, email: isEmail, revocationList: isAbsoluteUrl}
-  }];
-  if (version == '1.1.0') {
-    tests.push({
-      object: issuer,
-      required: {'@context': isContextIRI['1.1.0'], type: isString, id: isAbsoluteUrl}
-    });
-  }
-  return runTests(tests);
-};
 
 // IO & transformation
 //--------------------
@@ -213,35 +180,6 @@ function jsonParse(thing) {
     return thing;
   try {return JSON.parse(thing) }
   catch (ex) { return false }
-}
-
-// callback has signature `function (err, structures) { }`
-function getLinkedStructures(assertion, callback) {
-  function err(field, error) { error.field = field; return error }
-  function getStructure(url, field, callback) {
-    const options = {url: url, json: true, required: true};
-    resources.getUrl(options, function (ex, result) {
-      if (result.error)
-        return callback(err(field, result.error));
-      structures[field] = result.body;
-      return callback();
-    });
-  }
-  const structures = {
-    assertion: assertion,
-    badge: null,
-    issuer: null,
-  };
-  async.waterfall([
-    function getLinkedBadge(callback) {
-      getStructure(structures.assertion.badge, 'badge', callback);
-    },
-    function getLinkedIssuer(callback) {
-      getStructure(structures.badge.issuer, 'issuer', callback);
-    }
-  ], function (err) {
-    return callback(err, structures);
-  });
 }
 
 function unpackJWS(signature, callback) {
@@ -455,6 +393,39 @@ function runTests(tests) {
   }
   return objectIfKeys(errs);
 }
+
+function validateBadgeClass(badge, version, prefix) {
+  prefix = prefix || '';
+  var tests = [{
+    object: badge,
+    prefix: prefix,
+    required: {name: isString, description: isString, image: isAbsoluteUrlOrDataURI, criteria: isAbsoluteUrl, issuer: isAbsoluteUrl},
+    optional: {tags: isArray(isString), alignment: isArray(isValidAlignmentStructure)}
+  }];
+  if (version == '1.1.0') {
+    tests.push({
+      object: badge,
+      required: {'@context': isContextIRI['1.1.0'], type: isString, id: isAbsoluteUrl}
+    });
+  }
+  
+  return runTests(tests);
+}
+
+function validateIssuerOrganization(issuer, version) {
+  var tests = [{
+    object: issuer,
+    required: {name: isString, url: isAbsoluteUrl},
+    optional: {description: isString, image: isAbsoluteUrlOrDataURI, email: isEmail, revocationList: isAbsoluteUrl}
+  }];
+  if (version == '1.1.0') {
+    tests.push({
+      object: issuer,
+      required: {'@context': isContextIRI['1.1.0'], type: isString, id: isAbsoluteUrl}
+    });
+  }
+  return runTests(tests);
+};
 
 function validateAssertionStructure(assertion, version) {
   if (version == '0.5.0') {
@@ -880,7 +851,6 @@ validate.assertion = validateAssertionStructure;
 validate.badgeClass = validateBadgeClass;
 validate.issuerOrganization = validateIssuerOrganization;
 validate.isSignedBadge = isSignedBadge;
-validate.getLinkedStructures = getLinkedStructures;
 validate.checkRevoked = checkRevoked;
 validate.unpackJWS = unpackJWS;
 validate.taskCheckResources = taskCheckResources;

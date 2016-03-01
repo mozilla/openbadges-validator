@@ -8,6 +8,9 @@ const keys = require('./test-keys');
 const ORIGIN = 'https://example.org';
 const httpScope = nock(ORIGIN);
 
+/* @TODO
+determine if there are valuable test cases here, and
+possibly update and refactor to test taskCheckResources()?
 test('validator.getLinkedStructures: unreachable badge', function (t) {
   const assertion = generators['1.0.0-assertion']();
   validator.getLinkedStructures(assertion, function (err, results) {
@@ -50,6 +53,7 @@ test('validator.getLinkedStructures: valid `issuer`', function (t) {
     t.end();
   });
 });
+*/
 
 test('validator.taskCheckResources, all errors', function (t) {
   const data = {
