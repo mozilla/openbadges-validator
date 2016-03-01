@@ -79,7 +79,7 @@ test('1.0.0 signed validation fail: missing badge criteria', function (t) {
   });
   validator(signature, function (err, data) {
     t.same(err.code, 'structure');
-    t.ok(err.extra.badge.criteria, 'badge `criteria` error');
+    t.ok(err.extra.badge['badge.criteria'], 'badge `criteria` error');
     t.end();
   });
 });
@@ -246,12 +246,6 @@ test('0.5.0 validation fail: invalid structure', function (t) {
   validator(assertion, function (err, data) {
     t.same(err.code, 'structure');
     t.ok(err.extra.assertion['badge.criteria'], 'should be a criteria error');
-        console.log('###############');
-    console.log('ERRORS')
-    console.log(err);
-    console.log('DATA');
-    console.log(data);
-    console.log('###############');
     t.end();
   });
 });

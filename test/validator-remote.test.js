@@ -51,13 +51,14 @@ test('validator.getLinkedStructures: valid `issuer`', function (t) {
   });
 });
 
-test('validator.getLinkedResources, all errors', function (t) {
-  const structures = {
+test('validator.taskCheckResources, all errors', function (t) {
+  const data = {
+    parse: {scheme: '1.0.0-hosted'},
     assertion: generators['1.0.0-assertion'](),
     badge: generators['1.0.0-badge'](),
     issuer: generators['1.0.0-issuer']()
   };
-  validator.getLinkedResources(structures, function (err, results) {
+  validator.taskCheckResources(function (err, results) {
     t.same(err.code, 'resources', 'code should be resources');
     t.same(err.extra['assertion.image'].code, 'unreachable');
     t.same(err.extra['assertion.verify.url'].code, 'unreachable');
@@ -65,40 +66,44 @@ test('validator.getLinkedResources, all errors', function (t) {
     t.same(err.extra['issuer.image'].code, 'unreachable');
     t.same(err.extra['issuer.revocationList'].code, 'unreachable');
     t.end();
-  });
+  }, data);
 });
 
-test('validator.getLinkedResources, all errors', function (t) {
+test('validator.taskCheckResources, all errors', function (t) {
   httpScope
     .get('/assertion').reply(200, '{"found":true}')
     .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
     .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
     .get('/issuer-image').reply(200, 'issuer-image')
     .get('/revocation-list').reply(200, '{"found":true}')
-  const structures = {
+  const data = {
+    parse: {scheme: '1.0.0-hosted'},
     assertion: generators['1.0.0-assertion'](),
     badge: generators['1.0.0-badge'](),
     issuer: generators['1.0.0-issuer']()
   };
-  validator.getLinkedResources(structures, function (err, results) {
+  validator.taskCheckResources(function (err, results) {
     t.same(str(results['assertion.image']), 'assertion-image');
     t.same(results['assertion.verify.url'], {found:true});
     t.same(str(results['badge.image']), 'badge-image');
     t.same(str(results['issuer.image']), 'issuer-image');
     t.same(results['issuer.revocationList'], {found:true});
     t.end();
-  });
+  }, data);
 });
 
-test('validator.getLinkedResources, old assertion', function (t) {
+test('validator.taskCheckResources, old assertion', function (t) {
   httpScope
     .get('/').reply(200, 'root')
     .get('/image').reply(200, 'image', {'content-type': 'image/png'})
-  const assertion = generators['0.5.0']();
-  validator.getLinkedResources(assertion, function (err, results) {
-    t.same(str(results['badge.image']), 'image');
+  const data = {
+    parse: {scheme: '0.5.0-hosted'},
+    assertion: generators['0.5.0']()
+  };
+  validator.taskCheckResources(function (err, results) {
+    t.same(str(results['assertion.badge.image']), 'image');
     t.end();
-  });
+  }, data);
 });
 
 test('validator.unpackJWS: bad JWS', function (t) {

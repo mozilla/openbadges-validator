@@ -24,6 +24,23 @@ module.exports = {
       },
     }, replacements);
   },
+  '0.5.0-plain-recipient': function (replacements) {
+    return replaceAll({
+      parse: {version: '0.5.0'},
+      assertion: {
+        recipient: 'foo@bar.org'
+      }
+    }, replacements);
+  },
+  '0.5.0-hashed-recipient': function (replacements) {
+    return replaceAll({
+      parse: {version: '0.5.0'},
+      assertion: {
+        salt: 'lol',
+        recipient: 'sha256$abcd'
+      }
+    }, replacements);
+  },
   '1.0.0-assertion': function (replacements) {
     return replaceAll({
       uid: 'd3c4ff',
@@ -77,6 +94,30 @@ module.exports = {
       email: 'brian@example.org',
       revocationList: 'https://example.org/revocation-list'
     }, replacements)
+  },
+  '1.0.0-plain-recipient': function (replacements) {
+    return replaceAll({
+      parse: {version: '1.0.0'},
+      assertion: {
+        recipient: {
+          hashed: false,
+          type: 'email',
+          identity: 'foo@bar.org'
+        }
+      }
+    }, replacements);
+  },
+  '1.0.0-hashed-recipient': function (replacements) {
+    return replaceAll({
+      parse: {version: '1.0.0'},
+      assertion: {
+        recipient: {
+          hashed: true,
+          type: 'email',
+          identity: 'sha256$abcd'
+        }
+      }
+    }, replacements);
   },
   '1.1.0-assertion': function (replacements) {
     return replaceAll({

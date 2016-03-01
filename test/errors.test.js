@@ -36,7 +36,6 @@ test('validateHosted', function (t) {
       .get('/revocation-list').reply(200, '{"found":true}')
     validator(assertion, function(err, data) {
       t.ok(err, 'should have error');
-      t.same(err['recipient.identity']['code'], 'structure');
       t.ok(err['recipient.identity']['message'], 'has message');
       t.end();
     });
@@ -118,10 +117,9 @@ test('validateHosted', function (t) {
       });
       validator(assertion, function(err, data){
         t.ok(err, 'should have error');
-        t.same(err.recipient.code, 'structure');
-        t.ok(err.recipient.message, 'has message');
+        //t.ok(err.recipient.message, 'has message');
         t.end();
-      });
+      }, '0.5.0');
     });
     t.test('0.5 incorrect optional element', function (t) {
       const assertion = generators['0.5.0']({
@@ -145,8 +143,8 @@ test('validateHosted', function (t) {
         t.ok(err, 'should have error');
         t.same(err.code, 'resources');
         t.ok(err.message, 'has message');
-        t.ok(err.extra['badge.image'], 'correct extra');
-        var extra = err.extra['badge.image'];
+        t.ok(err.extra['assertion.badge.image'], 'correct extra');
+        var extra = err.extra['assertion.badge.image'];
         t.same(extra.code, 'http-status');
         t.end();
       });
@@ -259,18 +257,6 @@ test('validateHosted', function (t) {
 
 });
 test('validateHostedUrl', function (t) {
-  
-  /* @FIXME restore
-  t.test('validateHostedUrl: object arg', function(t) {
-    const assertion = generators['1.0.0-assertion']();
-    validator(assertion, function (err, data) {
-      t.ok(err, 'should have error');
-      t.same(err.code, 'input');
-      t.end();
-    });
-  });
-  */
-  
   t.test('input error', function (t) {
     t.test('non-url argument', function(t) {
       validator('not a url', function(err, data) {
@@ -314,16 +300,16 @@ test('validateHostedUrl', function (t) {
 test('validateSigned', function (t) {
   t.test('input error', function (t) {
 
-    /* @FIXME restore
+    /* @FIXME restore */
     t.test('validateSigned: object arg', function(t) {
       const assertion = generators['1.0.0-assertion']();
       validator(assertion, function (err, data) {
         t.ok(err, 'should have error');
-        t.same(err.code, 'input');
+        t.same(err.code, 'verify-type-mismatch');
         t.end();
-      });
+      }, '1.0.0', 'signed');
     });
-    */
+    /**/
     t.test('non-string argument', function(t) {
       validator({}, function(err, data) {
         t.ok(err, 'should have error');
@@ -412,9 +398,7 @@ test('validateSigned', function (t) {
       });
     });
   });
-
-  /* @FIXME should be failing */
-  /*
+  
   t.test('verify-signature error', function (t) {
     t.test('signature mismatch', function(t) {
       const assertion = generators['1.0.0-assertion']({
@@ -443,8 +427,6 @@ test('validateSigned', function (t) {
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found": true}')
       validator(signature, function(err, data) {
-        console.log('ERR');
-        console.log(err);
         t.ok(err, 'should have error');
         t.same(err.code, 'verify-signature');
         t.ok(err.message, 'has message');
@@ -452,7 +434,6 @@ test('validateSigned', function (t) {
       });
     });
   });
-
 
   t.test('verify-revoked error', function (t) {
     t.test('revoked assertion', function(t) {
@@ -491,7 +472,6 @@ test('validateSigned', function (t) {
     });
 
   });
-  */
 });
 
 test('validate', function(t) {
