@@ -182,26 +182,6 @@ function jsonParse(thing) {
   catch (ex) { return false }
 }
 
-function unpackJWS(signature, callback) {
-  const parts = jws.decode(signature);
-  if (!parts)
-    return callback(makeError('jws-decode'));
-  if (/^hs/i.test(parts.header.alg))
-    return callback(makeError('jws-algorithm'));
-  const payload = jsonParse(parts.payload);
-  if (!payload)
-    return callback(makeError('jws-payload-parse'));
-  payload.header = parts.header;
-  return callback(null, payload)
-}
-
-function checkRevoked(list, assertion) {
-  var msg;
-  if (!list) return;
-  if ((msg = list[assertion.uid]))
-    return makeError('verify-revoked', msg);
-}
-
 // Top-level validation control flow
 //----------------------------------
 
@@ -492,6 +472,49 @@ function taskValidateStructures(next, data) {
   return next(null, true);
 }
 
+function taskVerifyExtensions(next, data) {
+  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
+    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
+  }
+  const extensions = {};
+  const tests = [];
+  for (var property in data.assertion) {
+    if (data.assertion.hasOwnProperty(property)) {
+      if (isObject(data.assertion[property])
+        && typeof data.assertion[property]['@context'] !== 'undefined'
+        && typeof data.assertion[property]['type'] !== 'undefined') {
+        extensions[property] = data.assertion[property];
+        tests.push({
+          object: data.assertion[property],
+          prefix: 'extension:' + property,
+          required: {'@context': isAbsoluteUrl, type: isArray}
+        });
+      }
+    }
+  }
+  errors = runTests(tests);
+  if (errors) {
+    return next(makeError('extensions', 'invalid extension structure', removeNulls(errors)));
+  }
+  return next(null, extensions);
+}
+
+function taskValidateExtensions(next, data) {
+  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
+    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
+  }
+  for (var property in data.extensions) {
+    if (data.extensions.hasOwnProperty(property)) {
+      // @TODO add Type Validation here
+    }
+  }
+  errors = null;
+  if (errors) {
+    return next(makeError('extensions', 'invalid extension structure', removeNulls(errors)));
+  }
+  return next(null, extensions);
+}
+
 function taskCheckResources(next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
@@ -522,6 +545,19 @@ function taskCheckDeepEqual(next, data) {
   return next(null, true);
 }
 
+function unpackJWS(signature, callback) {
+  const parts = jws.decode(signature);
+  if (!parts)
+    return callback(makeError('jws-decode'));
+  if (/^hs/i.test(parts.header.alg))
+    return callback(makeError('jws-algorithm'));
+  const payload = jsonParse(parts.payload);
+  if (!payload)
+    return callback(makeError('jws-payload-parse'));
+  payload.header = parts.header;
+  return callback(null, payload)
+}
+
 function taskVerifySignature(next, data) {
   if (data.parse.type != 'signed') {
     return next(null, 'Only required for signed verification');
@@ -531,6 +567,13 @@ function taskVerifySignature(next, data) {
   if (!jws.verify(data.raw.input, algorithm, publicKey))
     return next(makeError('verify-signature'))
   return next(null, true);
+}
+
+function checkRevoked(list, assertion) {
+  var msg;
+  if (!list) return;
+  if ((msg = list[assertion.uid]))
+    return makeError('verify-revoked', msg);
 }
 
 function taskVerifyUnrevoked(next, data) {
@@ -592,6 +635,12 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
     // Apply validation rules to assertion, badgeclass and issuer.
     objects: ['issuer', function (next, data) {
       taskValidateStructures(next, data);
+    }],
+    verify_extensions: ['objects', function (next, data) {
+      taskVerifyExtensions(next, data);
+    }],
+    validate_extensions: ['verify_extensions', function (next, data) {
+      taskVerifyExtensions(next, data);
     }],
     // Fetch and verify remote resources: images, evidence, criteria & revocationList.
     resources: ['issuer', function(next, data) {
