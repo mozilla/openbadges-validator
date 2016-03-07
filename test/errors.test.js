@@ -563,6 +563,36 @@ test('getAssertionGuid', function (t) {
 
 });
 
+
+test('Extensions', function (t) {
+  t.test('no errors', function (t) {
+    const extension = generators['1.1.0-extension']();
+    const assertion = generators['1.1.0-assertion']({
+      myExtension: extension
+    });
+    const badge = generators['1.1.0-badge']();
+    const issuer = generators['1.1.0-issuer']();
+    httpScope()
+      .get('/').reply(200, 'root')
+      .get('/assertion').reply(200, JSON.stringify(assertion))
+      .get('/badge').reply(200, JSON.stringify(badge))
+      .get('/issuer').reply(200, JSON.stringify(issuer))
+      .get('/MyExtension/schema.json').reply(200, JSON.stringify(schema))
+      .get('/MyExtension/context.json').reply(200, JSON.stringify(context))
+      .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
+      .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
+      .get('/issuer-image').reply(200, 'issuer-image')
+      .get('/evidence').reply(200, 'evidence')
+      .get('/criteria').reply(200, 'criteria')
+    validator.getAssertionGUID(signature, function(err, data) {
+      t.ok(err, 'should have error');
+      t.same(err.code, 'structure');
+      t.ok(err.message, 'has message');
+      t.end();
+    });
+  });
+});
+
 // TODO: add the rest of the getUrl cases
 // TODO: test signed with unavailable public key
 // TODO: test makeOptionalValidator and makeRequiredValidator failures
