@@ -560,9 +560,7 @@ test('getAssertionGuid', function (t) {
       });
     });
   });
-
 });
-
 
 test('Extensions', function (t) {
   t.test('no errors', function (t) {
@@ -572,20 +570,24 @@ test('Extensions', function (t) {
     });
     const badge = generators['1.1.0-badge']();
     const issuer = generators['1.1.0-issuer']();
+    const context = generators['1.1.0-extension-context']();
+    const schema = generators['1.1.0-extension-schema']();
     httpScope()
       .get('/').reply(200, 'root')
-      .get('/assertion').reply(200, JSON.stringify(assertion))
-      .get('/badge').reply(200, JSON.stringify(badge))
-      .get('/issuer').reply(200, JSON.stringify(issuer))
-      .get('/MyExtension/schema.json').reply(200, JSON.stringify(schema))
-      .get('/MyExtension/context.json').reply(200, JSON.stringify(context))
+      .get('/1.1/assertion').reply(200, JSON.stringify(assertion))
+      .get('/1.1/badge').reply(200, JSON.stringify(badge))
+      .get('/1.1/issuer').reply(200, JSON.stringify(issuer))
+      .get('/1.1/MyExtension/schema.json').reply(200, JSON.stringify(schema))
+      .get('/1.1/MyExtension/context.json').reply(200, JSON.stringify(context))
       .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
       .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
       .get('/issuer-image').reply(200, 'issuer-image')
       .get('/evidence').reply(200, 'evidence')
       .get('/criteria').reply(200, 'criteria')
+      .get('/revocation-list').reply(200, '{"found":true}')
     validator(assertion, function(err, data) {
       t.notOk(err, 'no error messages');
+      console.log(err);
       t.end();
     });
   });

@@ -184,8 +184,8 @@ module.exports = {
   },
   '1.1.0-extension': function (replacements) {
     return replaceAll({
-      '@context': '/MyExtension/context.json',
-      type: ['Extension', 'extensions:MyExtension']
+      '@context': 'http://example.org/1.1/MyExtension/context.json',
+      type: ['Extension', 'extensions:MyExtension'],
       myBoolean: true,
       myInteger: 2,
       myString: 'foo',
@@ -200,12 +200,12 @@ module.exports = {
       "@context": {
         "obi": "https://w3id.org/openbadges#",
         "extensions": "https://example.org/",
-        "url": "extensions:MyExtension/context.json",
+        "url": "extensions:1.1/MyExtension/context.json",
       },
       "obi:validation": [
         {
           "obi:validatesType": "extensions:MyExtension",
-          "obi:validationSchema": "extensions:MyExtension/schema.json"
+          "obi:validationSchema": "extensions:1.1/MyExtension/schema.json"
         }
       ]
     }, replacements)
@@ -218,23 +218,23 @@ module.exports = {
       "type": "object",
       "properties": {
         "myBoolean": {
-          "type": "boolean",
+          "type": "boolean"
         },
         "myInteger": {
-          "type": "integer",
+          "type": "integer"
         },
         "myString": {
-          "type": "string",
+          "type": "string"
         },
-        "myObject" {
+        "myObject": {
           "type": "object"
         },
-        "myOptionalString" {
+        "myOptionalString": {
           "type": "string"
         }
       },
       "required": ["myBoolean", "myInteger", "myString", "myObject"]
-    }, replacements),
+    }, replacements)
   }
 };
 
