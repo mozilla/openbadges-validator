@@ -181,6 +181,60 @@ module.exports = {
       email: 'brian@example.org',
       revocationList: 'https://example.org/revocation-list'
     }, replacements)
+  },
+  '1.1.0-extension': function (replacements) {
+    return replaceAll({
+      '@context': '/MyExtension/context.json',
+      type: ['Extension', 'extensions:MyExtension']
+      myBoolean: true,
+      myInteger: 2,
+      myString: 'foo',
+      myObject: {
+        myProperty: 'myValue'
+      },
+      myOptionalString: 'bar'
+    }, replacements)
+  },
+  '1.1.0-extension-context': function (replacements) {
+    return replaceAll({
+      "@context": {
+        "obi": "https://w3id.org/openbadges#",
+        "extensions": "https://example.org/",
+        "url": "extensions:MyExtension/context.json",
+      },
+      "obi:validation": [
+        {
+          "obi:validatesType": "extensions:MyExtension",
+          "obi:validationSchema": "extensions:MyExtension/schema.json"
+        }
+      ]
+    }, replacements)
+  },
+  '1.1.0-extension-schema': function (replacements) {
+    return replaceAll({
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "title": "My Extension",
+      "description": "This extension is for test purposes only.",
+      "type": "object",
+      "properties": {
+        "myBoolean": {
+          "type": "boolean",
+        },
+        "myInteger": {
+          "type": "integer",
+        },
+        "myString": {
+          "type": "string",
+        },
+        "myObject" {
+          "type": "object"
+        },
+        "myOptionalString" {
+          "type": "string"
+        }
+      },
+      "required": ["myBoolean", "myInteger", "myString", "myObject"]
+    }, replacements),
   }
 };
 
