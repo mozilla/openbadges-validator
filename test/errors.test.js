@@ -584,10 +584,8 @@ test('Extensions', function (t) {
       .get('/issuer-image').reply(200, 'issuer-image')
       .get('/evidence').reply(200, 'evidence')
       .get('/criteria').reply(200, 'criteria')
-    validator.getAssertionGUID(signature, function(err, data) {
-      t.ok(err, 'should have error');
-      t.same(err.code, 'structure');
-      t.ok(err.message, 'has message');
+    validator(assertion, function(err, data) {
+      t.notOk(err, 'no error messages');
       t.end();
     });
   });
