@@ -487,7 +487,7 @@ function taskVerifyExtensions(next, data) {
         tests.push({
           object: data.assertion[property],
           prefix: 'extension:' + property,
-          required: {'@context': isAbsoluteUrl, type: isArray}
+          required: {'@context': isAbsoluteUrl, type: isArray(isString)}
         });
       }
     }
