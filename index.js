@@ -9,6 +9,8 @@ const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
+const jsonld = require('jsonld');
+const jsonschema = require('jsonschema').Validator;
 
 const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
 const VALID_IMAGES = [
@@ -480,9 +482,7 @@ function taskVerifyExtensions(next, data) {
   const tests = [];
   for (var property in data.assertion) {
     if (data.assertion.hasOwnProperty(property)) {
-      if (isObject(data.assertion[property])
-        && typeof data.assertion[property]['@context'] !== 'undefined'
-        && typeof data.assertion[property]['type'] !== 'undefined') {
+      if (isExtension(data.assertion[property])) {
         extensions[property] = data.assertion[property];
         tests.push({
           object: data.assertion[property],
@@ -499,33 +499,126 @@ function taskVerifyExtensions(next, data) {
   return next(null, extensions);
 }
 
-function taskValidateExtensions(next, data) {
-  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
-    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
-  }
-  for (var property in data.extensions) {
-    if (data.extensions.hasOwnProperty(property)) {
-      // @TODO add Type Validation here
-    }
-  }
-  errors = null;
-  if (errors) {
-    return next(makeError('extensions', 'invalid extension structure', removeNulls(errors)));
-  }
-  return next(null, extensions);
+function isExtension(value) {
+  return (isObject(value)
+    && typeof value['@context'] !== 'undefined'
+    && typeof value['type'] !== 'undefined'
+    && isArray(value['type'])
+    && value['type'].indexOf("Extension") > -1);
 }
 
 function taskCheckResources(next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
   }
-  return resources(data, resourceSchemes[data.parse.scheme].resources, function (err, result) {
+  spec = clone(resourceSchemes[data.parse.scheme].resources);
+  for (var property in data.extensions) {
+    if (data.extensions.hasOwnProperty(property)) {
+      spec['extensions.' + property + '.@context'] = {
+        required: true,
+        json: true
+      };
+    }
+  }
+  return resources(data, spec, function (err, result) {
     const errMsg = 'could not validate linked resources';
     if (err) {
       return next(makeError('resources', errMsg, err), result);
     }
     return next(null, result);
   });
+}
+
+function taskGetExtensionSchemas(next, data) {
+  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
+    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
+  }
+  var errType = 'ExtensionSchema';
+  var structure = {};
+  var spec = {};
+  for (var property in data.resources) {
+    if (data.resources.hasOwnProperty(property)) {
+      var extensionName = extractExtensionName(property);
+      if (extensionName) {
+        var schemaUrl = extractSchemaUrl(data, extensionName);
+        /*
+        console.log('$');
+        console.log('$');
+        console.log('$');
+        console.log('$');
+        console.log({
+          'resources': data.resources,
+          'extension': extensionName,
+          'url': schemaUrl
+        });
+        */
+        if (!isAbsoluteUrl(schemaUrl)) {
+          return next(makeError(errType, extensionName + ' missing valid schema URL'), data.resources[property]);
+        }
+        structure[extensionName] = schemaUrl;
+        spec[extensionName] = {
+          required: true,
+          json: true
+        };
+      };
+    }
+  }
+  /*
+  console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
+  console.log({
+    'STRUCTURE': structure,
+    'SPEC': spec
+  });
+  */
+  return resources(structure, spec, function (err, result) {
+    const errMsg = 'could not validate linked extension schema';
+    if (err) {
+      return next(makeError(errType, errMsg, err), result);
+    }
+    return next(null, result);
+  });
+}
+
+function extractExtensionName(property) {
+  var found = property.match(/extensions\.(\w+?)\.@context/);
+  if (found === null || !isString(found[1]) || found[1].length == 0)
+    return false;
+  return found[1];
+}
+
+function extractSchemaUrl(data, extensionName) {
+  if (typeof data.resources['extensions.' + extensionName + '.@context']['obi:validation'][0]['obi:validationSchema'] == 'undefined') {
+    return false;
+  }
+  return data.resources['extensions.' + extensionName + '.@context']['obi:validation'][0]['obi:validationSchema'];
+}
+
+function taskValidateExtensions(next, data) {
+  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
+    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
+  }
+  var validate_extensions = {};
+  var errors = [];
+  for (var extensionName in data.extensions) {
+    if (data.extensions.hasOwnProperty(extensionName)) {
+      if (!data.extension_schemas.hasOwnProperty(extensionName)) {
+        next(makeError('Extension', extensionName + ' missing schema', err));
+      }
+      else {
+        var extension = data.extensions[extensionName];
+        var schema = data.extension_schemas[extensionName];
+        var v = new jsonschema();
+        validate_extensions[extensionName] = v.validate(extension, schema);
+        if (validate_extensions[extensionName].errors.length) {
+          errors = errors.concat(validate_extensions[extensionName].errors);
+        }
+      }
+    }
+  }
+  if (errors.length) {
+    return next(makeError('extensions', 'invalid extension structure'), errors);
+  }
+  return next(null, validate_extensions);
 }
 
 function taskCheckDeepEqual(next, data) {
@@ -615,7 +708,6 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
     // Move assertion to `data.assertion`, unpack signed assertion.
     assertion: ['parse', function (next, data) {
       taskUnpackAssertion(next, data);
-      
     }],
     // Generate GUID for assertion.
     guid: ['assertion', function (next, data) {
@@ -636,15 +728,18 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
     objects: ['issuer', function (next, data) {
       taskValidateStructures(next, data);
     }],
-    verify_extensions: ['objects', function (next, data) {
-      taskVerifyExtensions(next, data);
-    }],
-    validate_extensions: ['verify_extensions', function (next, data) {
+    extensions: ['objects', function (next, data) {
       taskVerifyExtensions(next, data);
     }],
     // Fetch and verify remote resources: images, evidence, criteria & revocationList.
-    resources: ['issuer', function(next, data) {
+    resources: ['extensions', function(next, data) {
       taskCheckResources(next, data);
+    }],
+    extension_schemas: ['resources', function(next, data) {
+      taskGetExtensionSchemas(next, data);
+    }],
+    validate_extensions: ['extension_schemas', function (next, data) {
+      taskValidateExtensions(next, data);
     }],
     // Hosted only: Verify hosted and local assertion match exactly.
     deep_equal: ['resources', function (next, data) {
