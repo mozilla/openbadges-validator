@@ -225,7 +225,6 @@ test('Extensions', function (t) {
       t.end();
     });
   });
-  /*
   t.test('No errors: ExampleExtension', function (t) {
     const extension = extensions['ExampleExtension']();
     const assertion = generators['1.1.0-assertion']({
@@ -240,8 +239,6 @@ test('Extensions', function (t) {
       .get('/1.1/assertion').reply(200, JSON.stringify(assertion))
       .get('/1.1/badge').reply(200, JSON.stringify(badge))
       .get('/1.1/issuer').reply(200, JSON.stringify(issuer))
-      .get('/1.1/MyExtension/schema.json').reply(200, JSON.stringify(schema))
-      .get('/1.1/MyExtension/context.json').reply(200, JSON.stringify(context))
       .get('/assertion-image').reply(200, 'assertion-image', {'content-type': 'image/png'})
       .get('/badge-image').reply(200, 'badge-image', {'content-type': 'image/png'})
       .get('/issuer-image').reply(200, 'issuer-image')
@@ -254,6 +251,7 @@ test('Extensions', function (t) {
       t.end();
     });
   });
+  /*
   t.test('No errors: Endorsement', function (t) {
     const extension = extensions['Endorsement']();
     const assertion = generators['1.1.0-assertion']({
