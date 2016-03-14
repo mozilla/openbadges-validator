@@ -9,7 +9,6 @@ const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
-const jsonld = require('jsonld');
 const jsonschema = require('jsonschema').Validator;
 
 const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
@@ -541,6 +540,7 @@ function taskGetExtensionSchemas(next, data) {
       var extensionName = extractExtensionName(property);
       if (extensionName) {
         var schemaUrl = extractSchemaUrl(data, extensionName);
+
         /*
         console.log('$');
         console.log('$');
@@ -580,17 +580,22 @@ function taskGetExtensionSchemas(next, data) {
 }
 
 function extractExtensionName(property) {
-  var found = property.match(/extensions\.(\w+?)\.@context/);
+  var found = property.match(/extensions\.([\w:]+?)\.@context/);
   if (found === null || !isString(found[1]) || found[1].length == 0)
     return false;
   return found[1];
 }
 
 function extractSchemaUrl(data, extensionName) {
-  if (typeof data.resources['extensions.' + extensionName + '.@context']['obi:validation'][0]['obi:validationSchema'] == 'undefined') {
-    return false;
+  const a = 'extensions.' + extensionName + '.@context';
+  const b = 'obi:validation';
+  const c = 'obi:validationSchema';
+  if (typeof data.resources[a][b][0][c] !== 'undefined') {
+    return data.resources[a][b][0][c];
   }
-  return data.resources['extensions.' + extensionName + '.@context']['obi:validation'][0]['obi:validationSchema'];
+  if (typeof data.resources[a][b][c] !== 'undefined') {
+    return data.resources[a][b][c];
+  }  
 }
 
 function taskValidateExtensions(next, data) {
@@ -598,11 +603,11 @@ function taskValidateExtensions(next, data) {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
   }
   var validate_extensions = {};
-  var errors = [];
+  var errors = {};
   for (var extensionName in data.extensions) {
     if (data.extensions.hasOwnProperty(extensionName)) {
       if (!data.extension_schemas.hasOwnProperty(extensionName)) {
-        next(makeError('Extension', extensionName + ' missing schema', err));
+        next(makeError('Extension', extensionName + ' missing schema', data.extension_schemas));
       }
       else {
         var extension = data.extensions[extensionName];
@@ -610,13 +615,14 @@ function taskValidateExtensions(next, data) {
         var v = new jsonschema();
         validate_extensions[extensionName] = v.validate(extension, schema);
         if (validate_extensions[extensionName].errors.length) {
-          errors = errors.concat(validate_extensions[extensionName].errors);
+          errors[extensionName] = validate_extensions[extensionName].errors;
         }
       }
     }
   }
-  if (errors.length) {
-    return next(makeError('extensions', 'invalid extension structure'), errors);
+  errors = objectIfKeys(errors);
+  if (errors) {
+    return next(makeError('extensions', 'invalid extension structure', errors), errors);
   }
   return next(null, validate_extensions);
 }

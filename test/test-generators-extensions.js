@@ -2,6 +2,9 @@ const CONTEXT_IRI = {
   '1.1.0': 'https://w3id.org/openbadges/v1'
 }
 module.exports = {
+  'replaceAll': function (object, replacements) {
+    return replaceAll(object, replacements)
+  },
   'MyExtension': function (replacements) {
     return replaceAll({
       '@context': 'https://example.org/1.1/MyExtension/context.json',
@@ -232,10 +235,10 @@ module.exports = {
   'Accessibility': function (replacements) {
     return replaceAll({
        "extensions:Accessibility": {
-    "@context":"https://w3id.org/openbadges/extensions/accessibility/context.json",
+    "@context":"https://w3id.org/openbadges/extensions/accessibilityExtension/context.json",
     "type": ["Extension", "extensions:Accessibility"],
     "accessibilityAPI": "ARIA",
-    "accessibilityControl": ["fullKeyboardControl","fullMouseControl","fullTouchControl"],
+    "accessibilityControl": "fullKeyboardControl",
     "accessibilityFeature": "audioDescription",
     "accessibilityHazard": "noFlashingHazard",
     "url": "http://exampleaccessiblecontent.org/"
