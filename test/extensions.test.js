@@ -251,9 +251,6 @@ test('Extensions', function (t) {
     });
   });
 
-  // @FIXME enable once merged:
-  // https://github.com/openbadges/openbadges-specification/pull/64
-  /*
   t.test('No errors: ApplyLink', function (t) {
     const assertion = generators['1.1.0-assertion'](extensions['ApplyLink']());
     const badge = generators['1.1.0-badge']();
@@ -272,12 +269,9 @@ test('Extensions', function (t) {
     validator(assertion, function(err, data) {
       t.ok(data.validate_extensions['extension:ApplyLink'], 'Extension validated');
       t.notOk(err, 'no error messages');
-      console.log(err);
-      console.log(data);
       t.end();
     });
   });
-  */
 
   t.test('No errors: Endorsement', function (t) {
     const assertion = generators['1.1.0-assertion'](extensions['Endorsement']());
@@ -378,9 +372,7 @@ test('Extensions', function (t) {
     var replacements = {};
     replacements = extensions.replaceAll(replacements, {'myExtension': extensions['MyExtension']()});
     replacements = extensions.replaceAll(replacements, extensions['ExampleExtension']());
-    // @FIXME enable after merged:
-    // https://github.com/openbadges/openbadges-specification/pull/64
-    //replacements = extensions.replaceAll(replacements, extensions['ApplyLink']());
+    replacements = extensions.replaceAll(replacements, extensions['ApplyLink']());
     replacements = extensions.replaceAll(replacements, extensions['Endorsement']());
     replacements = extensions.replaceAll(replacements, extensions['Location']());
     replacements = extensions.replaceAll(replacements, extensions['Accessibility']());
@@ -406,7 +398,7 @@ test('Extensions', function (t) {
     validator(assertion, function(err, data) {
       t.ok(data.validate_extensions['myExtension'], 'Extension validated');
       t.ok(data.validate_extensions['extension:ExampleExtension'], 'Extension validated');
-      //t.ok(data.validate_extensions['extension:ApplyLink'], 'Extension validated');
+      t.ok(data.validate_extensions['extension:ApplyLink'], 'Extension validated');
       t.ok(data.validate_extensions['extensions:Endorsement'], 'Extension validated');
       t.ok(data.validate_extensions['schema:location'], 'Extension validated');
       t.ok(data.validate_extensions['extensions:Accessibility'], 'Extension validated');

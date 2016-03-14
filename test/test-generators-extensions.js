@@ -238,7 +238,7 @@ module.exports = {
     "@context":"https://w3id.org/openbadges/extensions/accessibilityExtension/context.json",
     "type": ["Extension", "extensions:Accessibility"],
     "accessibilityAPI": "ARIA",
-    "accessibilityControl": "fullKeyboardControl",
+    "accessibilityControl": ["fullKeyboardControl","fullMouseControl","fullTouchControl"],
     "accessibilityFeature": "audioDescription",
     "accessibilityHazard": "noFlashingHazard",
     "url": "http://exampleaccessiblecontent.org/"
@@ -275,7 +275,10 @@ module.exports = {
       "type": "string"
     },
     "accessibilityControl": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "accessibilityFeature": {
       "type": "string"
