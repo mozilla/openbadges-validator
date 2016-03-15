@@ -2,11 +2,11 @@ const test = require('tap').test;
 const nock = require('nock');
 const sinon = require('sinon');
 const _ = require('underscore');
-const validator = require('..');
-const generators = require('./test-generators');
-const extensions = require('./test-generators-extensions');
+const validator = require('../../');
+const generators = require('../test-generators');
+const extensions = require('../test-generators-extensions');
 const jws = require('jws');
-const keys = require('./test-keys');
+const keys = require('../test-keys');
 const util = require('util');
 
 var httpScope = function () {

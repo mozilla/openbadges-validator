@@ -2,15 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const jws = require('jws');
 const test = require('tap').test;
-const validator = require('..');
+const validator = require('../../');
 const nock = require('nock');
-const generators = require('./test-generators');
-const keys = require('./test-keys');
+const generators = require('../test-generators');
+const keys = require('../test-keys');
 const dataUrl = require('dataurl')
 
 var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
-var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
+var imageData = fs.readFileSync(path.join(__dirname, '../cc.large.png'));
 
 // 1.0.0 (Signed) Success
 //-----------------------

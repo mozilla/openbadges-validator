@@ -27,7 +27,7 @@
     "node": "~0.10.0"
   },
   "scripts": {
-    "test": "node node_modules/tap/bin/tap test/*.test.js"
+    "test": "node node_modules/tap/bin/tap test/local/*"
   },
   "repository": {
     "type": "git",

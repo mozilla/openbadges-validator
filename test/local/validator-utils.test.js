@@ -1,8 +1,8 @@
 const jws = require('jws');
 const test = require('tap').test;
-const validator = require('..');
-const generators = require('./test-generators.js');
-const keys = require('./test-keys.js');
+const validator = require('../../');
+const generators = require('../test-generators.js');
+const keys = require('../test-keys.js');
 
 function sign(thing) {
   return jws.sign({

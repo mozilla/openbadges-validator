@@ -1,7 +1,7 @@
 const test = require('tap').test;
-const validator = require('..');
-const testData = require('./test-data.js');
-const generators = require('./test-generators.js');
+const validator = require('../../');
+const testData = require('../test-data.js');
+const generators = require('../test-generators.js');
 
 test('0.5.0 badges: no errors', function (t) {
   const assertion = generators['0.5.0']();

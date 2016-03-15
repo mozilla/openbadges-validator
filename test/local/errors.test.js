@@ -2,13 +2,13 @@ const test = require('tap').test;
 const nock = require('nock');
 const sinon = require('sinon');
 const _ = require('underscore');
-const validator = require('..');
-const generators = require('./test-generators');
 const jws = require('jws');
-const keys = require('./test-keys');
 const util = require('util');
+const validator = require('../..');
+const generators = require('../test-generators');
+const keys = require('../test-keys');
 
-var UNREACHABLE = 'http://nope.example.org/'; // not sure how to do this with nock
+var UNREACHABLE = 'http://nope.example.org/';
 var ORIGIN = 'https://example.org';
 var httpScope = function() {
   nock.cleanAll();
@@ -16,7 +16,6 @@ var httpScope = function() {
 }
 
 test('validateHosted', function (t) {
-  // TODO: categorize in appropriate error group or create new
   t.test('1.0 assertion, hashed true, identity unhashed', function (t) {
     const assertion = generators['1.0.0-assertion']({
       'recipient.identity': 'someone@somewhere.org' 

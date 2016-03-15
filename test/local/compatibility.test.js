@@ -1,7 +1,7 @@
 const test = require('tap').test;
-const validator = require('..');
+const validator = require('../..');
 const nock = require('nock');
-const generators = require('./test-generators');
+const generators = require('../test-generators');
 var ORIGIN = 'https://example.org';
 var httpScope = nock(ORIGIN);
 
