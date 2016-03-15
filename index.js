@@ -12,11 +12,7 @@ const resources = require('./lib/resources');
 const jsonschema = require('jsonschema').Validator;
 
 const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
-const VALID_IMAGES = [
-  'image/png',
-  'image/svg',
-  'image/svg+xml'
-];
+const VALID_IMAGES = ['image/png', 'image/svg', 'image/svg+xml'];
 
 const CONTEXT_IRI = {
   '1.1.0': 'https://w3id.org/openbadges/v1'
@@ -191,21 +187,8 @@ function jsonParse (thing) {
 // - (2) a results object, containing the results of the previously executed functions
 //       assigned as properties according to the task property name.
 
-function parseVersion (assertion) {
-  if (!isObject(assertion)) {
-    return false;
-  }
-  var version = '1.1.0';
-  if (!assertion['@context'] || !assertion.id || !assertion.type) {
-    version = '1.0.0';
-  }
-  if ((isObject(assertion.badge) && isObject(assertion.badge.issuer)) || !assertion.verify) {
-    version = '0.5.0';
-  }
-  return version;
-}
-
-function parseInput (next, data) {
+// Task: parse
+function taskParseInput (next, data) {
   function callback (assertion, version, verifyType) {
     var version = version || parseVersion(assertion);
     if (!version) {
@@ -265,6 +248,50 @@ function parseInput (next, data) {
   }
 }
 
+function parseVersion (assertion) {
+  if (!isObject(assertion)) {
+    return false;
+  }
+  var version = '1.1.0';
+  if (!assertion['@context'] || !assertion.id || !assertion.type) {
+    version = '1.0.0';
+  }
+  if ((isObject(assertion.badge) && isObject(assertion.badge.issuer)) || !assertion.verify) {
+    version = '0.5.0';
+  }
+  return version;
+}
+
+// Task: assertion
+function taskUnpackAssertion (next, data) {
+  if (data.parse.type != 'signed') {
+    return next(null, data.parse.assertion);
+  }
+  unpackJWS(data.raw.input, function (err, payload) {
+    if (err) return next(err);
+    var errors = validateAssertionStructure(payload, data.parse.version);
+    if (errors)
+      return next(makeError('structure', 'invalid assertion structure', {
+        assertion: errors
+      }));
+    return next(null, payload);
+  });
+}
+
+function unpackJWS (signature, callback) {
+  const parts = jws.decode(signature);
+  if (!parts)
+    return callback(makeError('jws-decode'));
+  if (/^hs/i.test(parts.header.alg))
+    return callback(makeError('jws-algorithm'));
+  const payload = jsonParse(parts.payload);
+  if (!payload)
+    return callback(makeError('jws-payload-parse'));
+  payload.header = parts.header;
+  return callback(null, payload);
+}
+
+// Task: guid
 function taskGetGUID (next, data) {
   if (data.parse.version === '0.5.0') {
     if (isUrl(data.parse.input)) {
@@ -281,15 +308,7 @@ function taskGetGUID (next, data) {
   return next(null, urlToGUID(data.assertion.verify.url));
 }
 
-function taskGetLinkedObject (url, field, callback) {
-  function err (field, error) { error.field = field; return error; }
-  resources.getUrl({url: url, json: true, required: true}, function (ex, result) {
-    if (result.error)
-      return callback(err(field, result.error));
-    return callback(null, result.body);
-  });
-}
-
+// Task: badge
 function taskGetBadgeClass (next, data) {
   if (data.parse.version === '0.5.0') {
     if (!isObject(data.assertion.badge)) {
@@ -301,6 +320,16 @@ function taskGetBadgeClass (next, data) {
   }
 }
 
+function taskGetLinkedObject (url, field, callback) {
+  function err (field, error) { error.field = field; return error; }
+  resources.getUrl({url: url, json: true, required: true}, function (ex, result) {
+    if (result.error)
+      return callback(err(field, result.error));
+    return callback(null, result.body);
+  });
+}
+
+// Task: issuer
 function taskGetIssuer (next, data) {
   if (data.parse.version === '0.5.0') {
     if (!isObject(data.badge.issuer)) {
@@ -312,6 +341,7 @@ function taskGetIssuer (next, data) {
   }
 }
 
+// Task: recipient
 function taskValidateRecipient (next, data) {
   if (data.parse.version == '0.5.0') {
     var validityRule = data.assertion.hasOwnProperty('salt') ? isHash : isEmailOrHash;
@@ -449,6 +479,7 @@ function validateAssertionStructure (assertion, version) {
   return runTests(tests);
 }
 
+// Task: objects
 function taskValidateStructures (next, data) {
   const errors = {
     assertion: validateAssertionStructure(data.assertion, data.parse.version)
@@ -463,6 +494,7 @@ function taskValidateStructures (next, data) {
   return next(null, true);
 }
 
+// Task: extensions
 function taskVerifyExtensions (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
@@ -496,6 +528,7 @@ function isExtension (value) {
   && value['type'].indexOf('Extension') > -1);
 }
 
+// Task: resources
 function taskCheckResources (next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
@@ -518,6 +551,57 @@ function taskCheckResources (next, data) {
   });
 }
 
+// Task: deep_equal
+function taskCheckDeepEqual (next, data) {
+  if (data.parse.version === '0.5.0') {
+    return next(null, 'Deep equal not required prior to 1.0.0');
+  }
+  if (data.parse.type == 'signed') {
+    return next(null, 'Deep equal not required for signed badges.');
+  }
+  const hostedAssertion = data.resources['assertion.verify.url'];
+  const localAssertion = data.assertion;
+  if (!deepEqual(hostedAssertion, localAssertion))
+    return next(makeError('deep-equal', 'Remote assertion must match local assertion', {
+      local: localAssertion,
+      hosted: hostedAssertion
+    }));
+  return next(null, true);
+}
+
+// Task: signature
+function taskVerifySignature (next, data) {
+  if (data.parse.type != 'signed') {
+    return next(null, 'Only required for signed verification');
+  }
+  var algorithm = data.assertion.header.alg;
+  const publicKey = data.resources['assertion.verify.url'];
+  if (!jws.verify(data.raw.input, algorithm, publicKey))
+    return next(makeError('verify-signature'));
+  return next(null, true);
+}
+
+// Task: unrevoked
+function taskVerifyUnrevoked (next, data) {
+  if (data.parse.type != 'signed') {
+    return next(null, 'Only required for signed verification');
+  }
+  const revocationList = data.resources['issuer.revocationList'];
+  const assertion = data.assertion;
+  const error = checkRevoked(revocationList, assertion);
+  if (error)
+    return next(error);
+  return next(null, true);
+}
+
+function checkRevoked (list, assertion) {
+  var msg;
+  if (!list) return;
+  if ( (msg = list[assertion.uid]))
+    return makeError('verify-revoked', msg);
+}
+
+// Task: extension_schemas
 function taskGetExtensionSchemas (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
@@ -567,6 +651,7 @@ function extractSchemaUrl (data, extensionName) {
   return false;
 }
 
+// Task: validate_extensions
 function taskValidateExtensions (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
@@ -595,81 +680,6 @@ function taskValidateExtensions (next, data) {
   return next(null, validate_extensions);
 }
 
-function taskCheckDeepEqual (next, data) {
-  if (data.parse.version === '0.5.0') {
-    return next(null, 'Deep equal not required prior to 1.0.0');
-  }
-  if (data.parse.type == 'signed') {
-    return next(null, 'Deep equal not required for signed badges.');
-  }
-  const hostedAssertion = data.resources['assertion.verify.url'];
-  const localAssertion = data.assertion;
-  if (!deepEqual(hostedAssertion, localAssertion))
-    return next(makeError('deep-equal', 'Remote assertion must match local assertion', {
-      local: localAssertion,
-      hosted: hostedAssertion
-    }));
-  return next(null, true);
-}
-
-function unpackJWS (signature, callback) {
-  const parts = jws.decode(signature);
-  if (!parts)
-    return callback(makeError('jws-decode'));
-  if (/^hs/i.test(parts.header.alg))
-    return callback(makeError('jws-algorithm'));
-  const payload = jsonParse(parts.payload);
-  if (!payload)
-    return callback(makeError('jws-payload-parse'));
-  payload.header = parts.header;
-  return callback(null, payload);
-}
-
-function taskVerifySignature (next, data) {
-  if (data.parse.type != 'signed') {
-    return next(null, 'Only required for signed verification');
-  }
-  var algorithm = data.assertion.header.alg;
-  const publicKey = data.resources['assertion.verify.url'];
-  if (!jws.verify(data.raw.input, algorithm, publicKey))
-    return next(makeError('verify-signature'));
-  return next(null, true);
-}
-
-function checkRevoked (list, assertion) {
-  var msg;
-  if (!list) return;
-  if ( (msg = list[assertion.uid]))
-    return makeError('verify-revoked', msg);
-}
-
-function taskVerifyUnrevoked (next, data) {
-  if (data.parse.type != 'signed') {
-    return next(null, 'Only required for signed verification');
-  }
-  const revocationList = data.resources['issuer.revocationList'];
-  const assertion = data.assertion;
-  const error = checkRevoked(revocationList, assertion);
-  if (error)
-    return next(error);
-  return next(null, true);
-}
-
-function taskUnpackAssertion (next, data) {
-  if (data.parse.type != 'signed') {
-    return next(null, data.parse.assertion);
-  }
-  unpackJWS(data.raw.input, function (err, payload) {
-    if (err) return next(err);
-    var errors = validateAssertionStructure(payload, data.parse.version);
-    if (errors)
-      return next(makeError('structure', 'invalid assertion structure', {
-        assertion: errors
-      }));
-    return next(null, payload);
-  });
-}
-
 // Only params callback and input required.
 function fullValidateBadgeAssertion (callback, input, version, verifyType) {
   async.auto({
@@ -677,7 +687,7 @@ function fullValidateBadgeAssertion (callback, input, version, verifyType) {
     raw: function (next) { next(null, {input: input, version: version, type: verifyType}); },
     // Fetch assertion if input is URL, determine version and verify type (hosted or signed).
     parse: ['raw', function (next, data) {
-      parseInput(next, data);
+      taskParseInput(next, data);
     }],
     // Move assertion to `data.assertion`, unpack signed assertion.
     assertion: ['parse', function (next, data) {
@@ -709,12 +719,6 @@ function fullValidateBadgeAssertion (callback, input, version, verifyType) {
     resources: ['extensions', function (next, data) {
       taskCheckResources(next, data);
     }],
-    extension_schemas: ['resources', function (next, data) {
-      taskGetExtensionSchemas(next, data);
-    }],
-    validate_extensions: ['extension_schemas', function (next, data) {
-      taskValidateExtensions(next, data);
-    }],
     // Hosted only: Verify hosted and local assertion match exactly.
     deep_equal: ['resources', function (next, data) {
       taskCheckDeepEqual(next, data);
@@ -726,8 +730,19 @@ function fullValidateBadgeAssertion (callback, input, version, verifyType) {
     // Signed only: Verify hosted and local assertion match exactly.
     unrevoked: ['resources', function (next, data) {
       taskVerifyUnrevoked(next, data);
+    }],
+    extension_schemas: ['resources', function (next, data) {
+      taskGetExtensionSchemas(next, data);
+    }],
+    // Validate extensions based on fetched extension schemas.
+    validate_extensions: ['extension_schemas', function (next, data) {
+      taskValidateExtensions(next, data);
     }]
   }, callback);
+}
+
+function validate (input, callback, version, verifyType) {
+  return fullValidateBadgeAssertion(callback, input, version, verifyType);
 }
 
 function isJson (str) {
@@ -737,10 +752,6 @@ function isJson (str) {
     return false;
   }
   return true;
-}
-
-function validate (input, callback, version, verifyType) {
-  return fullValidateBadgeAssertion(callback, input, version, verifyType);
 }
 
 function isSignedBadge (thing) {
