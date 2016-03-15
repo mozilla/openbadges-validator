@@ -20,7 +20,7 @@ const VALID_IMAGES = [
 
 const CONTEXT_IRI = {
   '1.1.0': 'https://w3id.org/openbadges/v1'
-}
+};
 
 const resourceSchemes = {
   '0.5.0-hosted': {
@@ -73,24 +73,24 @@ const resourceSchemes = {
       }
     }
   }
-}
+};
 resourceSchemes['1.1.0-hosted'] = clone(resourceSchemes['1.0.0-hosted']);
 
-function testValidImage(mime) {
-  return VALID_IMAGES.indexOf(mime) !== -1
+function testValidImage (mime) {
+  return VALID_IMAGES.indexOf(mime) !== -1;
 }
 
 var sha256 = hashedString.bind(null, 'sha256');
 
 // @FIXME this function is never called in any validation scenario.
-function hashedString(algorithm, str) {
+function hashedString (algorithm, str) {
   var hash = crypto.createHash(algorithm);
   hash.update(str);
   return hash.digest('hex');
 }
 
 // @FIXME this function is never called in any validation scenario.
-function doesHashedEmailMatch(hashedEmail, salt, email) {
+function doesHashedEmailMatch (hashedEmail, salt, email) {
   if (!salt)
     salt = '';
   var match = hashedEmail.match(re.hash);
@@ -101,15 +101,15 @@ function doesHashedEmailMatch(hashedEmail, salt, email) {
 }
 
 // @FIXME this function is never called in any validation scenario.
-function doesRecipientMatch(info, identity) {
+function doesRecipientMatch (info, identity) {
   var assertion = info.structures.assertion;
-  if (info.version == "0.5.0") {
+  if (info.version == '0.5.0') {
     if (isHash(assertion.recipient))
       return doesHashedEmailMatch(assertion.recipient, assertion.salt, identity);
     else
       return assertion.recipient == identity;
   } else {
-    if (assertion.recipient.type != "email")
+    if (assertion.recipient.type != 'email')
       return false;
     if (assertion.recipient.hashed)
       return doesHashedEmailMatch(assertion.recipient.identity, assertion.recipient.salt, identity);
@@ -117,24 +117,24 @@ function doesRecipientMatch(info, identity) {
   }
 }
 
-function urlToGUID(url) {
+function urlToGUID (url) {
   return sha256('hosted:' + url);
 }
 
-function hostedAssertionGUID(urlOrAssertion) {
+function hostedAssertionGUID (urlOrAssertion) {
   return sha256('hosted:' + urlOrAssertion);
 }
 
-function signedAssertionToGUID(assertion) {
+function signedAssertionToGUID (assertion) {
   var urlParts = urlParse(assertion.verify.url);
   var issuerOrigin = urlParts.protocol + '//' + urlParts.host;
   return sha256('signed:' + assertion.uid + ':' + issuerOrigin);
 }
 
-function getAssertionGUID(urlOrSignature, callback) {
+function getAssertionGUID (urlOrSignature, callback) {
   if (isUrl(urlOrSignature))
     return callback(null, hostedAssertionGUID(urlOrSignature));
-  unpackJWS(urlOrSignature, function(err, payload) {
+  unpackJWS(urlOrSignature, function (err, payload) {
     if (err) return callback(err);
     var errors = validateAssertionStructure(payload);
     if (errors)
@@ -146,13 +146,13 @@ function getAssertionGUID(urlOrSignature, callback) {
 }
 
 // IO & transformation
-//--------------------
+// --------------------
 
-function clone(obj) {
+function clone (obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-function absolutize(assertion) {
+function absolutize (assertion) {
   if (!assertion || !isObject(assertion.badge) || !isObject(assertion.badge.issuer))
     return assertion;
 
@@ -174,25 +174,24 @@ function absolutize(assertion) {
   return result;
 }
 
-function jsonParse(thing) {
+function jsonParse (thing) {
   if (isObject(thing))
     return thing;
-  try {return JSON.parse(thing) }
-  catch (ex) { return false }
+  try {return JSON.parse(thing); } catch (ex) { return false; }
 }
 
 // Top-level validation control flow
-//----------------------------------
+// ----------------------------------
 
 // async.auto() tasks
-//-------------------
+// -------------------
 // Auto task callbacks receives two arguments:
 // - (1) a callback(err, result) which must be called when finished,
 //       passing an error (which can be null) and the result of the function's execution, and
 // - (2) a results object, containing the results of the previously executed functions
 //       assigned as properties according to the task property name.
 
-function parseVersion(assertion) {
+function parseVersion (assertion) {
   if (!isObject(assertion)) {
     return false;
   }
@@ -206,8 +205,8 @@ function parseVersion(assertion) {
   return version;
 }
 
-function parseInput(next, data) {
-  function callback(assertion, version, verifyType) {
+function parseInput (next, data) {
+  function callback (assertion, version, verifyType) {
     var version = version || parseVersion(assertion);
     if (!version) {
       return next(makeError('assertion', 'does not look like any known specification version.', {data: data}));
@@ -217,7 +216,7 @@ function parseInput(next, data) {
       type: verifyType,
       scheme: [version, verifyType].join('-'),
       assertion: assertion
-    })
+    });
   }
   var type = data.raw.type;
   var input = data.raw.input;
@@ -240,12 +239,11 @@ function parseInput(next, data) {
       return callback(jsonParse(decoded.payload), version, 'signed');
     }
     if (isUrl(input)) {
-      resources.getUrl({url: input, json: true, required: true}, function(ex, result) {
+      resources.getUrl({url: input, json: true, required: true}, function (ex, result) {
         if (result.error) {
           result.error.field = 'assertion';
           return next(result.error);
-        }
-        else {
+        } else {
           var assertion = result.body;
           if (isJson(assertion)) {
             assertion = JSON.parse(assertion);
@@ -259,24 +257,22 @@ function parseInput(next, data) {
           return callback(assertion, version, 'hosted');
         }
       });
-    }
-    else {
+    } else {
       next(makeError('input', 'not a valid signed badge or url', { input: input }));
     }
-  }
-  else {
+  } else {
     next(makeError('input', 'input must be a string or object', { input: input }));
   }
 }
 
-function taskGetGUID(next, data) {
+function taskGetGUID (next, data) {
   if (data.parse.version === '0.5.0') {
     if (isUrl(data.parse.input)) {
       return generateGUID(['hosted', data.parse.input]);
     }
     return next(null, null);
   }
-  if (typeof data.assertion.verify === 'undefined' || typeof data.assertion.verify.url === 'undefined' ) {
+  if (typeof data.assertion.verify === 'undefined' || typeof data.assertion.verify.url === 'undefined') {
     return next(makeError('structure', 'Missing verify URL'), {data: data});
   }
   if (!isUrl(data.assertion.verify.url)) {
@@ -285,8 +281,8 @@ function taskGetGUID(next, data) {
   return next(null, urlToGUID(data.assertion.verify.url));
 }
 
-function taskGetLinkedObject(url, field, callback) {
-  function err(field, error) { error.field = field; return error }
+function taskGetLinkedObject (url, field, callback) {
+  function err (field, error) { error.field = field; return error; }
   resources.getUrl({url: url, json: true, required: true}, function (ex, result) {
     if (result.error)
       return callback(err(field, result.error));
@@ -294,39 +290,36 @@ function taskGetLinkedObject(url, field, callback) {
   });
 }
 
-function taskGetBadgeClass(next, data) {
+function taskGetBadgeClass (next, data) {
   if (data.parse.version === '0.5.0') {
     if (!isObject(data.assertion.badge)) {
       return next(makeError('input', 'expected object', { badge: data.assertion.badge }));
     }
     return next(null, data.assertion.badge);
-  }
-  else {
+  } else {
     return taskGetLinkedObject(data.assertion.badge, 'badge', next);
   }
 }
 
-function taskGetIssuer(next, data) {
+function taskGetIssuer (next, data) {
   if (data.parse.version === '0.5.0') {
     if (!isObject(data.badge.issuer)) {
       return next(makeError('issuer', 'expected object', { issuer: data.badge.issuer }));
     }
     return next(null, data.badge.issuer);
-  }
-  else {
+  } else {
     return taskGetLinkedObject(data.badge.issuer, 'issuer', next);
   }
 }
 
-function taskValidateRecipient(next, data) {
+function taskValidateRecipient (next, data) {
   if (data.parse.version == '0.5.0') {
     var validityRule = data.assertion.hasOwnProperty('salt') ? isHash : isEmailOrHash;
     var tests = [{
       object: data.assertion,
       required: {recipient: validityRule}
     }];
-  }
-  else {
+  } else {
     var recipient = data.assertion.recipient;
     if (recipient.hashed) {
       var tests = [{
@@ -336,7 +329,7 @@ function taskValidateRecipient(next, data) {
         optional: {salt: isString}
       }];
     } else {
-      if (recipient.type == "email") {
+      if (recipient.type == 'email') {
         var tests = [{
           object: recipient,
           prefix: 'recipient',
@@ -349,7 +342,7 @@ function taskValidateRecipient(next, data) {
   next(errors, true);
 }
 
-function runTests(tests) {
+function runTests (tests) {
   const errs = {};
   const testOptional = makeOptionalValidator(errs);
   const testRequired = makeRequiredValidator(errs);
@@ -373,7 +366,7 @@ function runTests(tests) {
   return objectIfKeys(errs);
 }
 
-function validateBadgeClass(badge, version, prefix) {
+function validateBadgeClass (badge, version, prefix) {
   prefix = prefix || '';
   var tests = [{
     object: badge,
@@ -387,11 +380,11 @@ function validateBadgeClass(badge, version, prefix) {
       required: {'@context': isContextIRI['1.1.0'], type: isString, id: isAbsoluteUrl}
     });
   }
-  
+
   return runTests(tests);
 }
 
-function validateIssuerOrganization(issuer, version) {
+function validateIssuerOrganization (issuer, version) {
   var tests = [{
     object: issuer,
     required: {name: isString, url: isAbsoluteUrl},
@@ -404,9 +397,9 @@ function validateIssuerOrganization(issuer, version) {
     });
   }
   return runTests(tests);
-};
+}
 
-function validateAssertionStructure(assertion, version) {
+function validateAssertionStructure (assertion, version) {
   if (version == '0.5.0') {
     assertion.badge = assertion.badge || {};
     assertion.badge.issuer = assertion.badge.issuer || {};
@@ -415,20 +408,19 @@ function validateAssertionStructure(assertion, version) {
       required: {recipient: isEmailOrHash, badge: isObject},
       optional: {salt: isString, evidence: isUrl, expires: isDateString, issued_on: isDateString}
     },
-    {
-      object: assertion.badge,
-      prefix: 'badge',
-      required: {name: isString, description: isString, image: isUrl, criteria: isUrl, issuer: isObject},
-      optional: {version: isVersionString}
-    },
-    {
-      object: assertion.badge.issuer,
-      prefix: 'badge.issuer',
-      required: {name: isString, origin: isOrigin},
-      optional: {contact: isEmail, org: isString}
-    }];
-  }
-  else {
+      {
+        object: assertion.badge,
+        prefix: 'badge',
+        required: {name: isString, description: isString, image: isUrl, criteria: isUrl, issuer: isObject},
+        optional: {version: isVersionString}
+      },
+      {
+        object: assertion.badge.issuer,
+        prefix: 'badge.issuer',
+        required: {name: isString, origin: isOrigin},
+        optional: {contact: isEmail, org: isString}
+      }];
+  } else {
     assertion.recipient = assertion.recipient || {};
     assertion.verify = assertion.verify || {};
     var tests = [{
@@ -436,17 +428,17 @@ function validateAssertionStructure(assertion, version) {
       required: {uid: isString, issuedOn: isUnixOrISOTime, badge: isAbsoluteUrl},
       optional: {expires: isUnixOrISOTime, evidence: isAbsoluteUrl, image: isAbsoluteUrlOrDataURI}
     },
-    {
-      object: assertion.recipient,
-      prefix: 'recipient',
-      required: {type: isIdentityType, identity: isString, hashed: isBoolean},
-      optional: {salt: isString}
-    },
-    {
-      object: assertion.verify,
-      prefix: 'verify',
-      required: {type: isVerifyType, url: isAbsoluteUrl}
-    }];
+      {
+        object: assertion.recipient,
+        prefix: 'recipient',
+        required: {type: isIdentityType, identity: isString, hashed: isBoolean},
+        optional: {salt: isString}
+      },
+      {
+        object: assertion.verify,
+        prefix: 'verify',
+        required: {type: isVerifyType, url: isAbsoluteUrl}
+      }];
     if (version == '1.1.0') {
       tests.push({
         object: assertion,
@@ -457,10 +449,10 @@ function validateAssertionStructure(assertion, version) {
   return runTests(tests);
 }
 
-function taskValidateStructures(next, data) {
+function taskValidateStructures (next, data) {
   const errors = {
     assertion: validateAssertionStructure(data.assertion, data.parse.version)
-  }
+  };
   if (data.parse.version !== '0.5.0') {
     errors.badge = validateBadgeClass(data.badge, data.parse.version, 'badge');
     errors.issuer = validateIssuerOrganization(data.issuer, data.parse.version);
@@ -471,7 +463,7 @@ function taskValidateStructures(next, data) {
   return next(null, true);
 }
 
-function taskVerifyExtensions(next, data) {
+function taskVerifyExtensions (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
   }
@@ -496,15 +488,15 @@ function taskVerifyExtensions(next, data) {
   return next(null, extensions);
 }
 
-function isExtension(value) {
+function isExtension (value) {
   return (isObject(value)
-    && typeof value['@context'] !== 'undefined'
-    && typeof value['type'] !== 'undefined'
-    && isArray(value['type'])
-    && value['type'].indexOf("Extension") > -1);
+  && typeof value['@context'] !== 'undefined'
+  && typeof value['type'] !== 'undefined'
+  && isArray(value['type'])
+  && value['type'].indexOf('Extension') > -1);
 }
 
-function taskCheckResources(next, data) {
+function taskCheckResources (next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
   }
@@ -526,7 +518,7 @@ function taskCheckResources(next, data) {
   });
 }
 
-function taskGetExtensionSchemas(next, data) {
+function taskGetExtensionSchemas (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
   }
@@ -546,7 +538,7 @@ function taskGetExtensionSchemas(next, data) {
           required: true,
           json: true
         };
-      };
+      }
     }
   }
   return resources(structure, spec, function (err, result) {
@@ -558,14 +550,14 @@ function taskGetExtensionSchemas(next, data) {
   });
 }
 
-function extractExtensionName(property) {
+function extractExtensionName (property) {
   var found = property.match(/extensions\.([\w:]+?)\.@context/);
   if (found === null || !isString(found[1]) || found[1].length == 0)
     return false;
   return found[1];
 }
 
-function extractSchemaUrl(data, extensionName) {
+function extractSchemaUrl (data, extensionName) {
   const a = 'extensions.' + extensionName + '.@context';
   const b = 'obi:validation';
   const c = 'obi:validationSchema';
@@ -575,7 +567,7 @@ function extractSchemaUrl(data, extensionName) {
   return false;
 }
 
-function taskValidateExtensions(next, data) {
+function taskValidateExtensions (next, data) {
   if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
   }
@@ -585,8 +577,7 @@ function taskValidateExtensions(next, data) {
     if (data.extensions.hasOwnProperty(extensionName)) {
       if (!data.extension_schemas.hasOwnProperty(extensionName)) {
         next(makeError('Extension', extensionName + ' missing schema', data.extension_schemas));
-      }
-      else {
+      } else {
         var extension = data.extensions[extensionName];
         var schema = data.extension_schemas[extensionName];
         var v = new jsonschema();
@@ -604,12 +595,12 @@ function taskValidateExtensions(next, data) {
   return next(null, validate_extensions);
 }
 
-function taskCheckDeepEqual(next, data) {
+function taskCheckDeepEqual (next, data) {
   if (data.parse.version === '0.5.0') {
     return next(null, 'Deep equal not required prior to 1.0.0');
   }
   if (data.parse.type == 'signed') {
-    return next(null, 'Deep equal not required for signed badges.');    
+    return next(null, 'Deep equal not required for signed badges.');
   }
   const hostedAssertion = data.resources['assertion.verify.url'];
   const localAssertion = data.assertion;
@@ -621,7 +612,7 @@ function taskCheckDeepEqual(next, data) {
   return next(null, true);
 }
 
-function unpackJWS(signature, callback) {
+function unpackJWS (signature, callback) {
   const parts = jws.decode(signature);
   if (!parts)
     return callback(makeError('jws-decode'));
@@ -631,28 +622,28 @@ function unpackJWS(signature, callback) {
   if (!payload)
     return callback(makeError('jws-payload-parse'));
   payload.header = parts.header;
-  return callback(null, payload)
+  return callback(null, payload);
 }
 
-function taskVerifySignature(next, data) {
+function taskVerifySignature (next, data) {
   if (data.parse.type != 'signed') {
     return next(null, 'Only required for signed verification');
   }
   var algorithm = data.assertion.header.alg;
   const publicKey = data.resources['assertion.verify.url'];
   if (!jws.verify(data.raw.input, algorithm, publicKey))
-    return next(makeError('verify-signature'))
+    return next(makeError('verify-signature'));
   return next(null, true);
 }
 
-function checkRevoked(list, assertion) {
+function checkRevoked (list, assertion) {
   var msg;
   if (!list) return;
-  if ((msg = list[assertion.uid]))
+  if ( (msg = list[assertion.uid]))
     return makeError('verify-revoked', msg);
 }
 
-function taskVerifyUnrevoked(next, data) {
+function taskVerifyUnrevoked (next, data) {
   if (data.parse.type != 'signed') {
     return next(null, 'Only required for signed verification');
   }
@@ -664,11 +655,11 @@ function taskVerifyUnrevoked(next, data) {
   return next(null, true);
 }
 
-function taskUnpackAssertion(next, data) {
+function taskUnpackAssertion (next, data) {
   if (data.parse.type != 'signed') {
     return next(null, data.parse.assertion);
   }
-  unpackJWS(data.raw.input, function(err, payload) {
+  unpackJWS(data.raw.input, function (err, payload) {
     if (err) return next(err);
     var errors = validateAssertionStructure(payload, data.parse.version);
     if (errors)
@@ -680,7 +671,7 @@ function taskUnpackAssertion(next, data) {
 }
 
 // Only params callback and input required.
-function fullValidateBadgeAssertion(callback, input, version, verifyType) {
+function fullValidateBadgeAssertion (callback, input, version, verifyType) {
   async.auto({
     // Store raw input values for ;ater comparison.
     raw: function (next) { next(null, {input: input, version: version, type: verifyType}); },
@@ -704,7 +695,7 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
       taskGetIssuer(next, data);
     }],
     // Verify recipient hashed correctly or is a well-formed email address.
-    recipient: ['issuer', function(next, data) {
+    recipient: ['issuer', function (next, data) {
       taskValidateRecipient(next, data);
     }],
     // Apply validation rules to assertion, badgeclass and issuer.
@@ -715,10 +706,10 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
       taskVerifyExtensions(next, data);
     }],
     // Fetch and verify remote resources: images, evidence, criteria & revocationList.
-    resources: ['extensions', function(next, data) {
+    resources: ['extensions', function (next, data) {
       taskCheckResources(next, data);
     }],
-    extension_schemas: ['resources', function(next, data) {
+    extension_schemas: ['resources', function (next, data) {
       taskGetExtensionSchemas(next, data);
     }],
     validate_extensions: ['extension_schemas', function (next, data) {
@@ -739,20 +730,20 @@ function fullValidateBadgeAssertion(callback, input, version, verifyType) {
   }, callback);
 }
 
-function isJson(str) {
+function isJson (str) {
   try {
-      JSON.parse(str);
+    JSON.parse(str);
   } catch (e) {
-      return false;
+    return false;
   }
   return true;
 }
 
-function validate(input, callback, version, verifyType) {
+function validate (input, callback, version, verifyType) {
   return fullValidateBadgeAssertion(callback, input, version, verifyType);
 }
 
-function isSignedBadge(thing) {
+function isSignedBadge (thing) {
   const decoded = jws.decode(thing);
   if (!decoded)
     return false;
@@ -764,10 +755,10 @@ function isSignedBadge(thing) {
   return true;
 }
 
-function makeError(code, message, extra) {
+function makeError (code, message, extra) {
   if (isObject(message))
     extra = message, message = null;
-  const err = new Error(message||code);
+  const err = new Error(message || code);
   err.code = code;
   if (extra)
     err.extra = extra;
@@ -776,20 +767,20 @@ function makeError(code, message, extra) {
   return err;
 }
 
-function makeValidator(opts) {
+function makeValidator (opts) {
   opts.fn.message = opts.message;
   return opts.fn;
 }
 
-function pass() {
+function pass () {
   return true;
 }
 
-function hasKeys(obj) {
-  return Object.keys(obj).length > 0
+function hasKeys (obj) {
+  return Object.keys(obj).length > 0;
 }
 
-function removeNulls(obj) {
+function removeNulls (obj) {
   Object.keys(obj).forEach(function (key) {
     if (!obj[key] || !hasKeys(obj[key]))
       delete obj[key];
@@ -797,11 +788,11 @@ function removeNulls(obj) {
   return obj;
 }
 
-function objectIfKeys(obj) {
+function objectIfKeys (obj) {
   return hasKeys(obj) ? obj : null;
 }
 
-function regexToValidator(format, message) {
+function regexToValidator (format, message) {
   return makeValidator({
     message: message,
     fn: function (thing) {
@@ -810,7 +801,7 @@ function regexToValidator(format, message) {
   });
 }
 
-function stringToValidator(compare) {
+function stringToValidator (compare) {
   return makeValidator({
     message: 'must equal "' + compare + '"',
     fn: function (thing) {
@@ -819,7 +810,7 @@ function stringToValidator(compare) {
   });
 }
 
-function getInternalClass(thing) {
+function getInternalClass (thing) {
   return Object.prototype.toString.call(thing);
 }
 
@@ -840,17 +831,17 @@ const isContextIRI = {
 };
 const isEmailOrHash = makeValidator({
   message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
-  fn: function isEmailOrHash(thing) {
-    if (typeof(thing) != 'string') return false;
+  fn: function isEmailOrHash (thing) {
+    if (typeof (thing) != 'string') return false;
     return (isEmail(thing) || isHash(thing));
   }
 });
 const isHash = makeValidator({
   message: 'must be a self-identifying hash string ' +
-           '(e.g., "sha256$abcdef123456789") with a supported hash ' +
-           'algorithm (' + VALID_HASHES.join(',') + ')',
-  fn: function isHash(thing) {
-    if (typeof(thing) != 'string') return false;
+    '(e.g., "sha256$abcdef123456789") with a supported hash ' +
+    'algorithm (' + VALID_HASHES.join(',') + ')',
+  fn: function isHash (thing) {
+    if (typeof (thing) != 'string') return false;
     var match = thing.match(re.hash);
     if (!match) return false;
     if (VALID_HASHES.indexOf(match[1]) == -1) return false;
@@ -859,40 +850,40 @@ const isHash = makeValidator({
 });
 const isObject = makeValidator({
   message: 'must be an object',
-  fn: function isObject(thing) {
+  fn: function isObject (thing) {
     return getInternalClass(thing) == '[object Object]';
   }
 });
 const isString = makeValidator({
   message: 'must be a string',
-  fn: function isString(thing) {
-    return typeof thing === 'string'
+  fn: function isString (thing) {
+    return typeof thing === 'string';
   }
 });
 const isArray = makeValidator({
   message: 'must be an array',
-  fn: function isArray(validator) {
+  fn: function isArray (validator) {
     validator = validator || pass;
     return function (thing) {
       if (!Array.isArray(thing))
         return false;
       return thing.every(validator);
-    }
+    };
   }
 });
 const isBoolean = makeValidator({
   message: 'must be a boolean',
-  fn: function isBoolean(thing) {
+  fn: function isBoolean (thing) {
     return (
-      typeof thing === 'boolean'
-        || /false/i.test(thing)
-        || /true/i.test(thing)
-    )
+    typeof thing === 'boolean'
+    || /false/i.test(thing)
+    || /true/i.test(thing)
+    );
   }
 });
 const isUnixOrISOTime = makeValidator({
   message: 'must be a unix timestamp or ISO8601 date string',
-  fn: function isUnixOrISOTime(thing) {
+  fn: function isUnixOrISOTime (thing) {
     if (re.unixtime.test(thing))
       return true;
     try {
@@ -905,18 +896,18 @@ const isUnixOrISOTime = makeValidator({
 });
 const isAbsoluteUrlOrDataURI = makeValidator({
   message: 'must be an absolute URL or a dataURL',
-  fn: function isAbsoluteUrlOrDataURI(thing) {
+  fn: function isAbsoluteUrlOrDataURI (thing) {
     if (isAbsoluteUrl(thing))
       return true;
     const image = dataurl.parse(thing);
     if (image && testValidImage(image.mimetype))
       return true;
-    return false
+    return false;
   }
 });
 const isValidAlignmentStructure = makeValidator({
   message: 'must be an array of valid alignment structures (with required `name` and `url` properties and an optional `description` property)',
-  fn: function isValidAlignmentStructure(thing) {
+  fn: function isValidAlignmentStructure (thing) {
     if (!isObject(thing))
       return false;
     if (!isString(thing.name))
@@ -929,9 +920,9 @@ const isValidAlignmentStructure = makeValidator({
   }
 });
 
-function makeRequiredValidator(errors) {
+function makeRequiredValidator (errors) {
   errors = errors || {};
-  return function required(object, property, test, prefix) {
+  return function required (object, property, test, prefix) {
     prefix = prefix || '';
     if (!object.hasOwnProperty(property)) {
       errors[(prefix.length ? (prefix + '.') : '') + field] = makeError(property, 'missing required value');
@@ -947,12 +938,12 @@ function makeRequiredValidator(errors) {
       return false;
     }
     return true;
-  }
+  };
 }
 
-function makeOptionalValidator(errors) {
+function makeOptionalValidator (errors) {
   errors = errors || {};
-  return function required(object, property, test, prefix) {
+  return function required (object, property, test, prefix) {
     if (!object.hasOwnProperty(property) || !object[property]) {
       return true;
     }
@@ -966,7 +957,7 @@ function makeOptionalValidator(errors) {
       return false;
     }
     return true;
-  }
+  };
 }
 
 module.exports = validate;
