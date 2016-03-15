@@ -267,7 +267,7 @@ test('Extensions', function (t) {
       .get('/criteria').reply(200, 'criteria')
       .get('/revocation-list').reply(200, '{"found":true}')
     validator(assertion, function(err, data) {
-      t.ok(data.validate_extensions['extension:ApplyLink'], 'Extension validated');
+      t.ok(data.validate_extensions['extensions:ApplyLink'], 'Extension validated');
       t.notOk(err, 'no error messages');
       t.end();
     });
@@ -337,6 +337,9 @@ test('Extensions', function (t) {
     validator(assertion, function(err, data) {
       t.ok(data.validate_extensions['extensions:Accessibility'], 'Extension validated');
       t.notOk(err, 'no error messages');
+
+      console.log(err);
+      console.log(data.validate_extensions['extensions:Accessibility']);
       t.end();
     });
   });
