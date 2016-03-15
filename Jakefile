@@ -28,7 +28,8 @@ task('test-cov', {async: true}, function () {
 
   function findTests(dir) {
     return new jake.FileList()
-      .include(path.join(TEST_DIR, '*.test.js'))
+      .include(path.join(TEST_DIR, 'local/*.test.js'))
+      .include(path.join(TEST_DIR, 'remote/*.test.js'))
       .toArray();
   }
 

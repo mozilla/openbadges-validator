@@ -122,8 +122,6 @@ function urlToGUID(url) {
 }
 
 function hostedAssertionGUID(urlOrAssertion) {
-  if (typeof(urlOrAssertion) != "string")
-    urlOrAssertion = urlOrAssertion.verify.url;
   return sha256('hosted:' + urlOrAssertion);
 }
 
@@ -574,9 +572,7 @@ function extractSchemaUrl(data, extensionName) {
   if (typeof data.resources[a][b][0][c] !== 'undefined') {
     return data.resources[a][b][0][c];
   }
-  if (typeof data.resources[a][b][c] !== 'undefined') {
-    return data.resources[a][b][c];
-  }  
+  return false;
 }
 
 function taskValidateExtensions(next, data) {
