@@ -189,15 +189,15 @@ function jsonParse (thing) {
 
 // Task: parse
 function taskParseInput (next, data) {
-  function callback (assertion, version, verifyType) {
+  function callback (assertion, version, verificationType) {
     var version = version || parseVersion(assertion);
     if (!version) {
       return next(makeError('assertion', 'does not look like any known specification version.', {data: data}));
     }
     return next(null, {
       version: version,
-      type: verifyType,
-      scheme: [version, verifyType].join('-'),
+      type: verificationType,
+      scheme: [version, verificationType].join('-'),
       assertion: assertion
     });
   }
@@ -681,10 +681,10 @@ function taskValidateExtensions (next, data) {
 }
 
 // Only params callback and input required.
-function fullValidateBadgeAssertion (callback, input, version, verifyType) {
+function fullValidateBadgeAssertion (callback, input, version, verificationType) {
   async.auto({
     // Store raw input values for ;ater comparison.
-    raw: function (next) { next(null, {input: input, version: version, type: verifyType}); },
+    raw: function (next) { next(null, {input: input, version: version, type: verificationType}); },
     // Fetch assertion if input is URL, determine version and verify type (hosted or signed).
     parse: ['raw', function (next, data) {
       taskParseInput(next, data);
@@ -741,8 +741,8 @@ function fullValidateBadgeAssertion (callback, input, version, verifyType) {
   }, callback);
 }
 
-function validate (input, callback, version, verifyType) {
-  return fullValidateBadgeAssertion(callback, input, version, verifyType);
+function validate (input, callback, version, verificationType) {
+  return fullValidateBadgeAssertion(callback, input, version, verificationType);
 }
 
 function isJson (str) {
@@ -835,7 +835,7 @@ const isOrigin = regexToValidator(re.origin, 'must be a valid origin (scheme, ho
 const isVersionString = regexToValidator(re.version, 'must be a string in the format x.y.z');
 const isDateString = regexToValidator(re.date, 'must be a unix timestamp or string in the format YYYY-MM-DD');
 const isIdentityType = regexToValidator(re.identityType, 'must be the string "email"');
-const isVerifyType = regexToValidator(re.verifyType, 'must be either "hosted" or "signed"');
+const isVerifyType = regexToValidator(re.verificationType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
 const isContextIRI = {
   '1.1.0': stringToValidator(CONTEXT_IRI['1.1.0']),
