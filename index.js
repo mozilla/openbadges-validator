@@ -540,18 +540,6 @@ function taskGetExtensionSchemas(next, data) {
       var extensionName = extractExtensionName(property);
       if (extensionName) {
         var schemaUrl = extractSchemaUrl(data, extensionName);
-
-        /*
-        console.log('$');
-        console.log('$');
-        console.log('$');
-        console.log('$');
-        console.log({
-          'resources': data.resources,
-          'extension': extensionName,
-          'url': schemaUrl
-        });
-        */
         if (!isAbsoluteUrl(schemaUrl)) {
           return next(makeError(errType, extensionName + ' missing valid schema URL'), data.resources[property]);
         }
@@ -563,13 +551,6 @@ function taskGetExtensionSchemas(next, data) {
       };
     }
   }
-  /*
-  console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$');
-  console.log({
-    'STRUCTURE': structure,
-    'SPEC': spec
-  });
-  */
   return resources(structure, spec, function (err, result) {
     const errMsg = 'could not validate linked extension schema';
     if (err) {
