@@ -10,12 +10,17 @@ const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
 const jsonschema = require('jsonschema').Validator;
+var jsonld = require('jsonld');
 
 const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
 const VALID_IMAGES = ['image/png', 'image/svg', 'image/svg+xml'];
 
 const CONTEXT_IRI = {
   '1.1.0': 'https://w3id.org/openbadges/v1'
+};
+
+const EXTENSIONS_IRI = {
+  '1.1.0': 'https://w3id.org/openbadges/extensions#'
 };
 
 const resourceSchemes = {
@@ -71,6 +76,10 @@ const resourceSchemes = {
   }
 };
 resourceSchemes['1.1.0-hosted'] = clone(resourceSchemes['1.0.0-hosted']);
+resourceSchemes['1.1.0-hosted']['resources']['assertion.@context'] = {
+  required: true,
+  json: true
+};
 
 function testValidImage (mime) {
   return VALID_IMAGES.indexOf(mime) !== -1;
@@ -501,15 +510,18 @@ function taskVerifyExtensions (next, data) {
   }
   const extensions = {};
   const tests = [];
-  for (var property in data.assertion) {
-    if (data.assertion.hasOwnProperty(property)) {
-      if (isExtension(data.assertion[property])) {
-        extensions[property] = data.assertion[property];
-        tests.push({
-          object: data.assertion[property],
-          prefix: 'extension:' + property,
-          required: {'@context': isAbsoluteUrl, type: isArray(isString)}
-        });
+  for (var property in data.jsonld_expanded) {
+    if (data.jsonld_expanded.hasOwnProperty(property)) {
+      if (isExtension(property, data.parse.version)) {
+        var compactIri = getCompactIri(property, data.parse.version);
+        if (typeof data.assertion[compactIri] !== 'undefined') {
+          extensions[compactIri] = data.assertion[compactIri];
+          tests.push({
+            object: data.assertion[compactIri],
+            prefix: compactIri,
+            required: {'@context': isAbsoluteUrl, type: isArray(isString)}
+          });
+        }
       }
     }
   }
@@ -520,12 +532,92 @@ function taskVerifyExtensions (next, data) {
   return next(null, extensions);
 }
 
-function isExtension (value) {
-  return (isObject(value)
-  && typeof value['@context'] !== 'undefined'
-  && typeof value['type'] !== 'undefined'
-  && isArray(value['type'])
-  && value['type'].indexOf('Extension') > -1);
+function isExtension (value, version) {
+  var iri = getCompactIri(value, version);
+  return iri.length > 0;
+}
+
+function getCompactIri(absoluteIri, version) {
+  const bases = {
+    '1.1.0': {
+      "https://w3id.org/openbadges#": "obi",
+      "https://w3id.org/openbadges/extensions#": "extensions",
+      "http://www.w3.org/2001/XMLSchema#": "xsd",
+      "http://schema.org/": "schema",
+      "https://w3id.org/security#": "sec"
+    }
+  };
+  for (base in bases[version]) {
+    if (bases[version].hasOwnProperty(base)) {
+      var prefix = bases[version][base];
+      if (absoluteIri.substring(0, base.length) == base) {
+        return prefix + ':' + absoluteIri.substring(base.length);
+      }
+    }
+  }
+  return '';
+}
+
+// Task: jsonld_expanded
+function taskExpandJsonld (next, data) {
+  //return next(null, data.assertion);
+  if (data.parse.version == '0.5.0' || data.parse.version == '1.0.0') {
+    next(null, 'Extensions not included in ' + data.parse.version + ' specification');
+  }
+  var jsonld_expanded = {};
+  jsonld.expand(data.assertion, function(err, expanded) {
+    if (err === null || typeof err == 'undefined') {
+      err = null;
+    }
+    if (typeof expanded[0] !== 'undefined');
+      expanded = expanded[0];
+    return next(err, expanded);
+  });
+}
+
+// Task: extension_properties
+function taskExtensionProperties (next, data) {
+  var extensions = data.extensions;
+  var expanded = data.jsonld_expanded;
+  var rval = true;
+  var errors = {};
+  for (var extension in extensions) {
+    if (extensions.hasOwnProperty(extension)) {
+      var absoluteIri = getAbsoluteIri(extension, data.parse.version);
+      if (typeof data.jsonld_expanded[absoluteIri] == 'undefined') {
+        rval = false;
+        errors[extension] = absoluteIri;
+      }
+    }
+  }
+  errors = objectIfKeys(errors);
+  if (errors) {
+    return next(makeError('extension_properties', 'Improper extension property name', errors), errors);
+  }
+  return next(null, rval);
+}
+
+function getAbsoluteIri(iri, version) {
+  const bases = {
+    '1.1.0': {
+      "obi": "https://w3id.org/openbadges#",
+      "extensions": "https://w3id.org/openbadges/extensions#",
+      "xsd": "http://www.w3.org/2001/XMLSchema#",
+      "schema": "http://schema.org/",
+      "sec": "https://w3id.org/security#"
+    }
+  };
+  for (base in bases[version]) {
+    if (bases[version].hasOwnProperty(base)) {
+      if (iri.indexOf(':') !== -1) {
+        var replace = base + ':';
+        if (iri.substring(0, replace.length) == replace) {
+          return bases[version][base] + iri.substring(replace.length);
+        }
+      }
+    }
+  }
+  return '';
 }
 
 // Task: resources
@@ -701,6 +793,9 @@ function fullValidateBadgeAssertion (callback, input, version, verificationType)
     badge: ['assertion', function (next, data) {
       taskGetBadgeClass(next, data);
     }],
+    jsonld_expanded: ['assertion', function (next, data) {
+      taskExpandJsonld(next, data);
+    }],
     issuer: ['badge', function (next, data) {
       taskGetIssuer(next, data);
     }],
@@ -712,12 +807,15 @@ function fullValidateBadgeAssertion (callback, input, version, verificationType)
     objects: ['issuer', function (next, data) {
       taskValidateStructures(next, data);
     }],
-    extensions: ['objects', function (next, data) {
+    extensions: ['jsonld_expanded', function (next, data) {
       taskVerifyExtensions(next, data);
     }],
     // Fetch and verify remote resources: images, evidence, criteria & revocationList.
     resources: ['extensions', function (next, data) {
       taskCheckResources(next, data);
+    }],
+    extension_properties: ['extensions', function (next, data) {
+      taskExtensionProperties(next, data);
     }],
     // Hosted only: Verify hosted and local assertion match exactly.
     deep_equal: ['resources', function (next, data) {

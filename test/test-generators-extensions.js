@@ -7,22 +7,24 @@ module.exports = {
   },
   'MyExtension': function (replacements) {
     return replaceAll({
-      '@context': 'https://example.org/1.1/MyExtension/context.json',
-      type: ['Extension', 'extensions:MyExtension'],
-      myBoolean: true,
-      myInteger: 2,
-      myString: 'foo',
-      myObject: {
-        myProperty: 'myValue'
-      },
-      myOptionalString: 'bar'
+      'extensions:ExampleExtension': {
+        '@context': 'https://example.org/1.1/MyExtension/context.json',
+        type: ['Extension', 'extensions:MyExtension'],
+        myBoolean: true,
+        myInteger: 2,
+        myString: 'foo',
+        myObject: {
+          myProperty: 'myValue'
+        },
+        myOptionalString: 'bar'
+      }
     }, replacements);
   },
   'MyExtension-context': function (replacements) {
     return replaceAll({
       '@context': {
         'obi': 'https://w3id.org/openbadges#',
-        'url': 'extensions:1.1/MyExtension/context.json',
+        'url': 'https://example.org/1.1/MyExtension/context.json',
       },
       'obi:validation': [
         {
@@ -60,7 +62,7 @@ module.exports = {
   },
   'ExampleExtension': function (replacements) {
     return replaceAll({
-      'extension:ExampleExtension': {
+      'extensions:ExampleExtension': {
         '@context': 'https://openbadgespec.org/extensions/exampleExtension/context.json',
         'type': ['Extension', 'extensions:ExampleExtension'],
         'exampleProperty': "I'm a property, short and sweet."
