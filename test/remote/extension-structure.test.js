@@ -114,7 +114,7 @@ test('Extensions', function (t) {
       t.end();
     });
   });
-
+  /*
   // TODO ExampleExtension type is not array
   t.test('ExampleExtension: type is not array', function (t) {
     const extension = extensions['ExampleExtension']();

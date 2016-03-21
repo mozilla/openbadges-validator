@@ -9,76 +9,17 @@ const dateutil = require('dateutil');
 const deepEqual = require('deep-equal');
 const re = require('./lib/regex');
 const resources = require('./lib/resources');
+const constants = require('./lib/constants');
 const jsonschema = require('jsonschema').Validator;
 var jsonld = require('jsonld');
-
-const VALID_HASHES = ['sha1', 'sha256', 'sha512', 'md5'];
-const VALID_IMAGES = ['image/png', 'image/svg', 'image/svg+xml'];
-
-const CONTEXT_IRI = {
-  '1.1.0': 'https://w3id.org/openbadges/v1'
-};
-
-const EXTENSIONS_IRI = {
-  '1.1.0': 'https://w3id.org/openbadges/extensions#'
-};
-
-const resourceSchemes = {
-  '0.5.0-hosted': {
-    resources: {
-      'assertion.badge.image': {
-        required: true,
-        'content-type': VALID_IMAGES,
-      }
-    }
-  },
-  '1.0.0-hosted': {
-    resources: {
-      'assertion.image': {
-        required: false,
-        'content-type': VALID_IMAGES,
-      },
-      'assertion.verify.url': {
-        required: true,
-        json: true
-      },
-      'badge.image': {
-        required: true,
-        'content-type': VALID_IMAGES
-      },
-      'issuer.image': { required: false },
-      'issuer.revocationList': {
-        required: false,
-        json: true
-      }
-    },
-  },
-  '1.0.0-signed': {
-    resources: {
-      'assertion.image': {
-        required: false,
-        'content-type': VALID_IMAGES,
-      },
-      'assertion.verify.url': {
-        required: true,
-        json: false
-      },
-      'badge.image': {
-        required: true,
-        'content-type': VALID_IMAGES
-      },
-      'issuer.image': { required: false },
-      'issuer.revocationList': {
-        required: false,
-        json: true
-      }
-    }
-  }
-};
-resourceSchemes['1.1.0-hosted'] = clone(resourceSchemes['1.0.0-hosted']);
+var cache = new jsonld.DocumentCache();
+cache.set(constants.VERSIONS['1.1.0'].context_iri, {contextUrl: null, documentUrl: constants.VERSIONS['1.1.0'].context_iri, document: constants.VERSIONS['1.1.0'].context_doc});
+// cache.get(url);
+// cache.set(url,{contextUrl: null, documentUrl: redirects[i], document: body});
+// https://github.com/digitalbazaar/jsonld.js/issues/127
 
 function testValidImage (mime) {
-  return VALID_IMAGES.indexOf(mime) !== -1;
+  return constants.VALID_IMAGES.indexOf(mime) !== -1;
 }
 
 var sha256 = hashedString.bind(null, 'sha256');
@@ -629,7 +570,7 @@ function taskCheckResources (next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
   }
-  spec = clone(resourceSchemes[data.parse.scheme].resources);
+  spec = clone(constants.SCHEMES[data.parse.scheme].resources);
   for (var property in data.extensions) {
     if (data.extensions.hasOwnProperty(property)) {
       spec['extensions.' + property + '.@context'] = {
@@ -815,7 +756,7 @@ function fullValidateBadgeAssertion (callback, input, version, verificationType)
       taskVerifyExtensions(next, data);
     }],
     // Fetch and verify remote resources: images, evidence, criteria & revocationList.
-    resources: ['extensions', function (next, data) {
+    resources: ['extensions', 'issuer', function (next, data) {
       taskCheckResources(next, data);
     }],
     extension_properties: ['extensions', function (next, data) {
@@ -940,7 +881,7 @@ const isIdentityType = regexToValidator(re.identityType, 'must be the string "em
 const isVerifyType = regexToValidator(re.verificationType, 'must be either "hosted" or "signed"');
 const isUnixTime = regexToValidator(re.unixtime, 'must be a valid unix timestamp');
 const isContextIRI = {
-  '1.1.0': stringToValidator(CONTEXT_IRI['1.1.0']),
+  '1.1.0': stringToValidator(constants.VERSIONS['1.1.0'].context_iri),
 };
 const isEmailOrHash = makeValidator({
   message: 'must be an email address or a self-identifying hash string (e.g., "sha256$abcdef123456789")',
@@ -952,12 +893,12 @@ const isEmailOrHash = makeValidator({
 const isHash = makeValidator({
   message: 'must be a self-identifying hash string ' +
     '(e.g., "sha256$abcdef123456789") with a supported hash ' +
-    'algorithm (' + VALID_HASHES.join(',') + ')',
+    'algorithm (' + constants.VALID_HASHES.join(',') + ')',
   fn: function isHash (thing) {
     if (typeof (thing) != 'string') return false;
     var match = thing.match(re.hash);
     if (!match) return false;
-    if (VALID_HASHES.indexOf(match[1]) == -1) return false;
+    if (constants.VALID_HASHES.indexOf(match[1]) == -1) return false;
     return true;
   }
 });
@@ -1088,5 +1029,5 @@ validate.taskCheckResources = taskCheckResources;
 validate.getAssertionGUID = getAssertionGUID;
 validate.doesRecipientMatch = doesRecipientMatch;
 validate.doesHashedEmailMatch = doesHashedEmailMatch;
-validate.VALID_HASHES = VALID_HASHES;
+validate.VALID_HASHES = constants.VALID_HASHES;
 validate.taskValidateRecipient = taskValidateRecipient;
