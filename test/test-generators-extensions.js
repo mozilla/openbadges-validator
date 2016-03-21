@@ -7,8 +7,8 @@ module.exports = {
   },
   'MyExtension': function (replacements) {
     return replaceAll({
-      'extensions:ExampleExtension': {
-        '@context': 'https://example.org/1.1/MyExtension/context.json',
+      'extensions:MyExtension': {
+        '@context': 'http://openbadgespec.org/extensions/MyExtension/context.json',
         type: ['Extension', 'extensions:MyExtension'],
         myBoolean: true,
         myInteger: 2,
@@ -29,7 +29,7 @@ module.exports = {
       'obi:validation': [
         {
           'obi:validatesType': 'extensions:MyExtension',
-          'obi:validationSchema': 'https://example.org/1.1/MyExtension/schema.json'
+          'obi:validationSchema': 'http://openbadgespec.org/extensions/MyExtension/schema.json'
         }
       ]
     }, replacements);

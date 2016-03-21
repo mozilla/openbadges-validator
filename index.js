@@ -76,10 +76,6 @@ const resourceSchemes = {
   }
 };
 resourceSchemes['1.1.0-hosted'] = clone(resourceSchemes['1.0.0-hosted']);
-resourceSchemes['1.1.0-hosted']['resources']['assertion.@context'] = {
-  required: true,
-  json: true
-};
 
 function testValidImage (mime) {
   return VALID_IMAGES.indexOf(mime) !== -1;
@@ -565,14 +561,22 @@ function taskExpandJsonld (next, data) {
     next(null, 'Extensions not included in ' + data.parse.version + ' specification');
   }
   var jsonld_expanded = {};
-  jsonld.expand(data.assertion, function(err, expanded) {
-    if (err === null || typeof err == 'undefined') {
-      err = null;
-    }
-    if (typeof expanded[0] !== 'undefined');
-      expanded = expanded[0];
-    return next(err, expanded);
-  });
+  try {
+    jsonld.expand(data.assertion, function(err, expanded) {
+      if (err === null || typeof err == 'undefined') {
+        err = null;
+      }
+      if (typeof expanded !== 'undefined' && typeof expanded[0] !== 'undefined') {
+        expanded = expanded[0];
+      }
+      else {
+        expanded = false;
+      }
+      return next(err, expanded);
+    });
+  } catch (e) {
+    return next(e, 'Unable to expand linked data.');
+  }
 }
 
 // Task: extension_properties
