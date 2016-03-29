@@ -128,7 +128,6 @@ test('1.1 is 1.1 compliant', function (t) {
     .get('/criteria').reply(200, 'criteria')
     .get('/revocation-list').reply(200, '{"found":true}');
   validator(assertion, function (err, data) {
-    console.log(data);
     t.notOk(err, 'Minimum-compliant 1.1 assertion is compliant with 1.1');
     t.end();
   }, '1.1.0');
