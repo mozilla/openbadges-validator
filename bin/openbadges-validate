@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+var validator = require('../');
+var args = process.argv.slice(2);
+var assertion = args[0] || '';
+var specVersion = args[1] || '';
+var verificationType = args[2] || '';
+
+function usage() {
+  console.log("usage: openbadges-validate assertion [spec_version] [verification_type]");
+  console.log('');
+  console.log('    assertion:         URL, JWS signature or JSON representation');
+  console.log('');
+  console.log('    spec_version:      The target specification, allowed values: "0.5.0", "1.0.0", "1.1.0"');
+  console.log('                       (Omit or use "auto" for auto-detect)');
+  console.log('');
+  console.log('    verification_type: The target verification type, allowed values: "hosted", "signed"');
+  console.log('                       (Omit or use "auto" for auto-detect)');
+  console.log('');
+}
+
+(function main () {
+  if (assertion.length) {
+    if (specVersion.length == 0 || specVersion == 'auto') {
+      specVersion = undefined;
+    }
+    else {
+      if (['1.1.0', '1.0.0', '0.5.0'].indexOf(specVersion) === -1) {
+        usage();
+        process.exit(1);
+      }
+    }
+    if (verificationType.length == 0  || verificationType == 'auto') {
+      verificationType = undefined;
+    }
+    else {
+      if (['hosted', 'signed'].indexOf(verificationType) === -1) {
+        usage();
+        process.exit(1);
+      }
+    }
+    console.log('assertion:         ' + assertion);
+    console.log('spec_version:      ' + (specVersion || '<auto-detect>'));
+    console.log('verification_type: ' + (verificationType || '<auto-detect>'));
+    console.log('--------------------------------');
+    validator.validate(assertion, handleResponse, specVersion, verificationType);
+  }
+  else {
+    usage();
+    process.exit(1);
+  }
+})();
+
+function handleResponse (err, data) {
+  if (err === null) {
+    console.log('Okay');
+    process.exit(0);
+  }
+  if (err instanceof Error) {
+    console.log('Error:');
+    if (err.name && err.message) {
+      console.log(err.name + ': ' + err.message);
+    }
+    if (err.reason) {
+      console.log('└── ' + err.reason);
+    }
+    process.exit(1);
+  }
+  console.log('Error details:');
+  console.log(err);
+  console.log(data);
+  process.exit(1);
+}

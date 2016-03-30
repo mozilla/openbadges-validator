@@ -108,6 +108,24 @@ and viewed in `cover_html/index.html`.
 
 The coverage tool used is [node-cover][], see its documentation for details.
 
+
+### Command line tool
+
+Once installed, you can validate a badge URL at the command line:
+
+```
+$ node bin/openbadges-validate
+usage: openbadges-validate assertion [spec_version] [verification_type]
+
+    assertion:         URL, JWS signature or JSON representation
+
+    spec_version:      The target specification, allowed values: "0.5.0", "1.0.0", "1.1.0"
+                       (Omit or use "auto" for auto-detect)
+
+    verification_type: The target verification type, allowed values: "hosted", "signed"
+                       (Omit or use "auto" for auto-detect)
+```
+
 [jake]: https://github.com/mde/jake
 [node-cover]: https://github.com/itay/node-cover
 
