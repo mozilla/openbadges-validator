@@ -150,6 +150,9 @@ function taskParseInput (next, data) {
   var type = data.raw.type;
   var input = data.raw.input;
   var version = data.raw.version;
+  if (isJson(input)) {
+    input = JSON.parse(input);
+  }
   if (isObject(input)) {
     if (typeof input.verify !== 'undefined' && input.verify.type !== 'undefined' && input.verify.type !== 'hosted' || type === 'signed') {
       return next(makeError('verify-type-mismatch', 'when `verify.type` is "signed", a JWS signature is expected', { input: input }));
@@ -187,7 +190,7 @@ function taskParseInput (next, data) {
         }
       });
     } else {
-      next(makeError('input', 'not a valid signed badge or url', { input: input }));
+      next(makeError('input', 'not a valid signed badge, URL or JSON', { input: input }));
     }
   } else {
     next(makeError('input', 'input must be a string or object', { input: input }));
