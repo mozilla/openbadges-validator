@@ -15,56 +15,20 @@ like so:
 var validator = require('openbadges-validator');
 ```
 
-## validator(thing, callback)
+### validator(input, callback, version, verificationType)
 
 Validate a badge assertion and return an object containing info about
 the validated assertion.
 
-`thing` should be an assertion, URL for a hosted assertion, or a signed badge.
+- `input` (object or string) should be an assertion object, json string representing an assertion object,URL for a hosted assertion, or a signed badge signature.
 
-The callback is passed two arguments, `(err, info)`.
+- `callback` (function) A function taking two parameters `(err, data)`, where `err == null` indicates a valid badge, and `data` is an object containing all validation data collected before an error was thrown.<br><br>Take a look at the structure of [the full resulting `data` object](https://github.com/mozilla/openbadges-validator/wiki/Example-Validator-Result).
 
-`info` is an object containing the following properties:
+- `version` (string) Optional: force the validator to check against a certain specification version. <br>Allowed values: `"0.5.0"`, `"1.0.0"` `"1.1.0". 
 
-- `version`: Version of the specification that the analyzed assertion
-  corresponds to. Currently this will be either "1.0.0" or "0.5.0".
+- `verificationType` (string) Optional: force the validator to use a certain type of verification. <br>Allowed values: `"hosted"`, `"signed"`.
 
-- `guid`: The GUID of the assertion, as per the algorithm described in
-  the documentation for `getAssertionGUID`. If the assertion passed-in
-  was the literal object for a 0.5.0-style assertion, this will be
-  `null`, since there is no way to know what the URL of the assertion
-  is.
-
-- `signature`: JSON Web Signature representation of the assertion. This
-  will only be present if the assertion came in as a JWS.
-
-- `structures`
-  - `assertion`: The assertion data
-  - `badge`: Badge data related to assertion.
-  - `issuer`: Issuer data related to badge.
-
-- `resources`: Object with all of the resources related to the
-  assertion, badge and issuer. A list of the possible properties follows
-  (properties marked with a star are guaranteed to exist. **NOTE**,
-  property names are the literal dotted strings, not deep property
-  lookups, i.e, `resources['assertion.image']`.
-  - `assertion.image`
-  - `assertion.verify.url`
-  - `assertion.evidence`
-  - `badge.criteria`★
-  - `badge.image`★
-  - `issuer.url`
-  - `issuer.image`
-  - `issuer.revocationList`
-
-## validator.validateHosted(assertion, callback)
-## validator.validateHostedUrl(url, callback)
-## validator.validateSigned(signature, callback)
-
-The methods underlying `validator(thing, callback)` can also be called
-directly to validate a specific type of input. 
-
-## validator.getAssertionGUID(urlOrSignature, callback)
+### validator.getAssertionGUID(urlOrSignature, callback)
 
 Given either a hosted assertion URL or a signed assertion,
 return an alphanumeric string that uniquely identifies the badge.
@@ -87,7 +51,7 @@ the assertion's GUID will be the hex-encoded SHA256 hash of
 `signed:abcd:https://example.org`, or
 `61ae9c039ecc7d08cac6fea3ed6fa3d47463b34e3f2f3bbe86be33688b2f105a`.
 
-## validator.doesRecipientMatch(info, identity)
+### validator.doesRecipientMatch(info, identity)
 
 Returns a boolean indicating whether or not an assertion has
 been issued to a particular recipient.
@@ -98,9 +62,25 @@ by the `validator` function.
 `identity` is an email address. (In the future, identities other than
 email addresses may be supported.)
 
+### validator.parseVersion(assertion)
+
+- `assertion` (object)
+
+Returns one of `"1.1.0"`, `"1.0.0"`, `"0.5.0"`, or `false` if no version recognized.
+
+### validator.isSignedBadge(signature)
+
+Returns `true` if the signature can be decoded and looks like a badge.
+
 # Tests
 
-All tests can be run with `npm test`.
+By default, this only runs local tests:
+
+`npm test`
+
+To run all tests (including those that require an internet connection), use:
+
+`node node_modules/tap/bin/tap test/*`
 
 A code coverage report can be generated with `node_modules/.bin/jake test-cov`
 (or `jake test-cov` if you have [jake][] installed globally)

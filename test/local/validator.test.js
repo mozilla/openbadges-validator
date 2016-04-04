@@ -1,33 +1,32 @@
 const test = require('tap').test;
-const validator = require('..');
-const testData = require('./test-data.js');
-const generators = require('./test-generators.js');
+const validator = require('../../');
+const testData = require('../test-data.js');
+const generators = require('../test-generators.js');
 
 test('0.5.0 badges: no errors', function (t) {
   const assertion = generators['0.5.0']();
-  const errors = validator.assertion(assertion);
-  console.dir(errors);
+  const errors = validator.assertion(assertion, '0.5.0');
   t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-assertion: no errors', function (t) {
   const assertion = generators['1.0.0-assertion']();
-  const errors = validator.assertion(assertion);
+  const errors = validator.assertion(assertion, '1.0.0');
   t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-badge: no errors', function (t) {
   const badge = generators['1.0.0-badge']();
-  const errors = validator.badgeClass(badge);
+  const errors = validator.badgeClass(badge, '1.0.0');
   t.notOk(errors, 'should have zero errors');
   t.end();
 });
 
 test('1.0.0-issuer: no errors', function (t) {
   const issuer = generators['1.0.0-issuer']();
-  const errors = validator.issuerOrganization(issuer);
+  const errors = validator.issuerOrganization(issuer, '1.0.0');
   t.notOk(errors, 'should have zero errors');
   t.end();
 });
@@ -35,6 +34,7 @@ test('1.0.0-issuer: no errors', function (t) {
 test('0.5.0 badges with errors', function (t) {
   const version = '0.5.0';
   const options = {
+    version: '0.5.0',
     generator: generators[version],
     data: testData[version],
     method: validator.assertion
@@ -63,20 +63,19 @@ test('0.5.0 badges with errors', function (t) {
 test('1.0.0-assertion: some errors', function (t) {
   const version = '1.0.0-assertion';
   const options = {
+    version: '1.0.0',
     generator: generators[version],
     data: testData[version],
     method: validator.assertion
   };
   with (macros(options)) {
     required('uid');
-    object('recipient');
 
     required('recipient.identity');
     required('recipient.type');
     required('recipient.hashed');
     optional('recipient.salt');
 
-    object('verify');
     required('verify.type');
     required('verify.url');
 
@@ -92,6 +91,7 @@ test('1.0.0-assertion: some errors', function (t) {
 test('1.0.0-badge: some errors', function (t) {
   const version = '1.0.0-badge';
   const options = {
+    version: '1.0.0',
     generator: generators[version],
     data: testData[version],
     method: validator.badgeClass
@@ -111,6 +111,7 @@ test('1.0.0-badge: some errors', function (t) {
 test('1.0.0-issuer: some errors', function (t) {
   const version = '1.0.0-issuer';
   const options = {
+    version: '1.0.0',
     generator: generators[version],
     data: testData[version],
     method: validator.issuerOrganization
@@ -140,7 +141,6 @@ test('1.0.0-issuer: some errors', function (t) {
  *       signature `function (replacements) { }`, where `replacements` is
  *       an object containing fields and values to use in place of the
  *       defaults from the generator.
- *
  */
 
 function macros(options) {
@@ -156,11 +156,11 @@ function testInvalid(options, field) {
   if (!data)
     throw new Error('need to set up test data for invalid `'+field+'`');
   flatten(data).forEach(function (val) {
-    test('0.5.0 badges: invalid '+field+' ("'+val+'")', function (t) {
+    test(options.version + ' assertion: invalid ' + field + ' ("'+val+'")', function (t) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
-      const errors = options.method(badge);
+      const errors = options.method(badge, options.version);
       t.ok(errors[field], 'should be `'+field+'` error');
       t.end();
     });
@@ -175,26 +175,29 @@ function testValid(options, field) {
       const replacement = {};
       replacement[field] = val;
       const badge = options.generator(replacement);
-      const errors = options.method(badge);
+      const errors = options.method(badge, options.version);
       t.notOk(errors, 'should have no errors');
       t.end();
     });
   });
 }
 function testOptional(options, field) {
-  test('0.5.0 badges: missing '+field, function (t) {
-    const replacement = {}; replacement[field] = null;
-    const badge = options.generator(replacement);
-    const errors = options.method(badge);
+  var message = '0.5.0 assertion: missing ' + field;
+  test(message, function (t) {
+    const replacement = {};
+    replacement[field] = null;
+    const assertion = options.generator(replacement);
+    const errors = options.method(assertion, options.version);
     t.notOk(errors, 'should have no errors');
     t.end();
   });
 }
 function testRequired(options, field) {
   test('0.5.0 badges: missing '+field, function (t) {
-    const replacement = {}; replacement[field] = null;
+    const replacement = {};
+    replacement[field] = null;
     const badge = options.generator(replacement);
-    const errors = options.method(badge);
+    const errors = options.method(badge, options.version);
     t.ok(errors[field], 'should be `'+field+'` error');
     t.end();
   });
@@ -213,86 +216,57 @@ function testObjectField(options, field) {
   testRequired(options, field);
   testInvalid(options, field);
 }
-test('0.5.0: validateOldInterdependentFields()', function(t) {
+
+test('0.5.0: taskValidateRecipients()', function(t) {
   t.plan(5);
 
-  validator.validateOldInterdependentFields({structures: {assertion: {
-    salt: 'lol',
-    recipient: 'sha256$abcd'
-  }}}, function(err, info) {
+  validator.taskValidateRecipient(function(err, result) {
     t.notOk(err, 'should have no errors');
-    t.ok(info.structures, 'should pass through info');
-  });
+    t.ok(result, 'should pass back TRUE');
+  }, generators['0.5.0-hashed-recipient']());
 
-  validator.validateOldInterdependentFields({structures: {assertion: {
-    recipient: 'foo@bar.org'
-  }}}, function(err) {
+  validator.taskValidateRecipient(function(err) {
     t.notOk(err, 'should have no errors');
-  });
+  }, generators['0.5.0-plain-recipient']());
 
-  validator.validateOldInterdependentFields({structures: {assertion: {
-    recipient: 'sha256$abcd'
-  }}}, function(err) {
+  validator.taskValidateRecipient(function(err) {
     t.notOk(err, 'should have no errors');
-  });
+  }, generators['0.5.0-plain-recipient']({'assertion.recipient': 'sha256$abcd'}));
 
-  validator.validateOldInterdependentFields({structures: {assertion: {
-    salt: 'lol',
-    recipient: 'foo@bar.org'
-  }}}, function(err) {
+  validator.taskValidateRecipient(function(err) {
     t.ok(err.recipient.message.match(/must be a self-identifying hash/));
-  });
+  }, generators['0.5.0-plain-recipient']({'assertion.salt': 'lol'}));
 
   t.end();
 });
-test('1.0.0: validateInterdependentFields()', function(t) {
-  var validateInterdependentFields = validator.validateInterdependentFields;
+
+test('1.0.0: taskValidateRecipient()', function(t) {
+  var taskValidateRecipient = validator.taskValidateRecipient;
 
   t.plan(6);
-  
-  validateInterdependentFields({structures: {assertion: {recipient: {
-    hashed: false,
-    type: 'email',
-    identity: 'foo@bar.org'
-  }}}}, function(err, info) {
-    t.notOk(err, 'should have no errors');
-    t.ok(info.structures, 'should pass through info');
-  });
 
-  validateInterdependentFields({structures: {assertion: {recipient: {
-    hashed: true,
-    type: 'email',
-    salt: 'lol',
-    identity: 'sha256$abcd'
-  }}}}, function(err, info) {
+  taskValidateRecipient(function(err, result) {
     t.notOk(err, 'should have no errors');
-  });
+    t.ok(result, 'should pass back TRUE');
+  }, generators['1.0.0-plain-recipient']());
 
-  validateInterdependentFields({structures: {assertion: {recipient: {
-    hashed: true,
-    type: 'email',
-    identity: 'sha256$abcd'
-  }}}}, function(err, info) {
+  taskValidateRecipient(function(err, result) {
     t.notOk(err, 'should have no errors');
-  });
+  }, generators['1.0.0-hashed-recipient']());
 
-  validateInterdependentFields({structures: {assertion: {recipient: {
-    hashed: true,
-    type: 'email',
-    salt: 'lol',
-    identity: 'foo@bar.org'
-  }}}}, function(err, info) {
+  taskValidateRecipient(function(err, result) {
+    t.notOk(err, 'should have no errors');
+  }, generators['1.0.0-hashed-recipient']({'assertion.recipient.salt': 'lol'}));
+
+  var data = generators['1.0.0-hashed-recipient']({'assertion.recipient.identity': 'foo@bar.org'});
+  taskValidateRecipient(function(err, result) {
     t.ok(err['recipient.identity'].message
       .match(/must be a self-identifying hash/));
-  });
+  }, data);
 
-  validateInterdependentFields({structures: {assertion: {recipient: {
-    hashed: false,
-    type: 'email',
-    identity: 'sha256$abcd'
-  }}}}, function(err, info) {
+  taskValidateRecipient(function(err, result) {
     t.equal(err['recipient.identity'].message, 'must be an email address');
-  });
+  }, generators['1.0.0-plain-recipient']({'assertion.recipient.identity': 'sha256$abcd'}));
 
   t.end();
 });

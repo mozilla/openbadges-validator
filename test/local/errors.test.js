@@ -2,13 +2,13 @@ const test = require('tap').test;
 const nock = require('nock');
 const sinon = require('sinon');
 const _ = require('underscore');
-const validator = require('..');
-const generators = require('./test-generators');
 const jws = require('jws');
-const keys = require('./test-keys');
 const util = require('util');
+const validator = require('../..');
+const generators = require('../test-generators');
+const keys = require('../test-keys');
 
-var UNREACHABLE = 'http://nope.example.org/'; // not sure how to do this with nock
+var UNREACHABLE = 'http://nope.example.org/';
 var ORIGIN = 'https://example.org';
 var httpScope = function() {
   nock.cleanAll();
@@ -16,8 +16,6 @@ var httpScope = function() {
 }
 
 test('validateHosted', function (t) {
-
-  // TODO: categorize in appropriate error group or create new
   t.test('1.0 assertion, hashed true, identity unhashed', function (t) {
     const assertion = generators['1.0.0-assertion']({
       'recipient.identity': 'someone@somewhere.org' 
@@ -35,18 +33,16 @@ test('validateHosted', function (t) {
       .get('/evidence').reply(200, 'evidence')
       .get('/criteria').reply(200, 'criteria')
       .get('/revocation-list').reply(200, '{"found":true}')
-    validator.validateHosted(assertion, function(err, data) {
+    validator(assertion, function(err, data) {
       t.ok(err, 'should have error');
-      // FIXME: err has no code or message
-      //t.same(err.code, '<CODE HERE>');
-      //t.ok(err.message, 'has message');
+      t.ok(err['recipient.identity']['message'], 'has message');
       t.end();
     });
   });
 
   t.test('input error', function (t) { 
     t.test('non-object argument', function (t) {
-      validator.validateHosted('string', function(err, data) {
+      validator('string', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -57,7 +53,7 @@ test('validateHosted', function (t) {
       const assertion = generators['1.0.0-assertion']({
         verify: undefined
       });
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -65,7 +61,6 @@ test('validateHosted', function (t) {
       });
     });
   });
-
   t.test('structure error', function (t) {
     t.test('1.0 missing required element', function (t) {
       const assertion = generators['1.0.0-assertion']({
@@ -84,7 +79,7 @@ test('validateHosted', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found":true}')
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'structure');
         t.ok(err.message, 'has message');
@@ -108,7 +103,7 @@ test('validateHosted', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found":true}')
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'structure');
         t.ok(err.message, 'has message');
@@ -119,18 +114,17 @@ test('validateHosted', function (t) {
       const assertion = generators['0.5.0']({
         recipient: undefined
       });
-      validator.validateHosted(assertion, function(err, data){
+      validator(assertion, function(err, data){
         t.ok(err, 'should have error');
-        t.same(err.code, 'structure');
-        t.ok(err.message, 'has message');
+        //t.ok(err.recipient.message, 'has message');
         t.end();
-      });
+      }, '0.5.0');
     });
     t.test('0.5 incorrect optional element', function (t) {
       const assertion = generators['0.5.0']({
         evidence: 'not a url'
       });
-      validator.validateHosted(assertion, function(err, data){
+      validator(assertion, function(err, data){
         t.ok(err, 'should have error');
         t.same(err.code, 'structure');
         t.ok(err.message, 'has message');
@@ -144,13 +138,12 @@ test('validateHosted', function (t) {
       httpScope()
         .get('/image').reply(404);
       const assertion = generators['0.5.0']();
-      validator.validateHosted(assertion, function(err, data) {
-        console.log(err);
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'resources');
         t.ok(err.message, 'has message');
-        t.ok(err.extra['badge.image'], 'correct extra');
-        var extra = err.extra['badge.image'];
+        t.ok(err.extra['assertion.badge.image'], 'correct extra');
+        var extra = err.extra['assertion.badge.image'];
         t.same(extra.code, 'http-status');
         t.end();
       });
@@ -162,7 +155,7 @@ test('validateHosted', function (t) {
       const assertion = generators['1.0.0-assertion']({
         'badge': undefined
       });
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'required');
         t.same(err.field, 'badge');
@@ -177,7 +170,7 @@ test('validateHosted', function (t) {
       const assertion = generators['1.0.0-assertion']({
         'badge': UNREACHABLE
       });
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'unreachable');
         t.ok(err.message, 'has message');
@@ -201,7 +194,7 @@ test('validateHosted', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found":true}')
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'parse');
         t.ok(err.message, 'has message');
@@ -215,7 +208,7 @@ test('validateHosted', function (t) {
       const assertion = generators['1.0.0-assertion']({
         verify: { type: 'signed' }
       });
-      validator.validateHosted(assertion, function(err, data) {
+      validator(assertion, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'verify-type-mismatch');
         t.ok(err.message, 'has message');
@@ -223,7 +216,6 @@ test('validateHosted', function (t) {
       });
     });
   });
-
   t.test('verify-hosted error', function (t) {
     t.test('hosted differs from local', function(t) {
       const assertion = generators['1.0.0-assertion']();
@@ -240,21 +232,33 @@ test('validateHosted', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found":true}')
-      validator.validateHosted(_.extend(assertion, {uid: 'different'}), function(err, data) {
+      validator(_.extend(assertion, {uid: 'different'}), function(err, data) {
         t.ok(err, 'should have error');
-        t.same(err.code, 'verify-hosted');
+        t.same(err.code, 'deep-equal');
         t.ok(err.message, 'has message');
         t.end();
       });
     });
   });
+
+  t.test('validateHosted: string arg', function(t) {
+    const signature = jws.sign({
+      header: { alg: 'rs256' },
+      payload: { dummy: 'assertion' },
+      privateKey: keys.private
+    });
+    validator(signature, function (err, data) {
+      t.ok(err, 'should have error');
+      t.same(err.code, 'input');
+      t.end();
+    });
+  });
+
 });
-
 test('validateHostedUrl', function (t) {
-
   t.test('input error', function (t) {
     t.test('non-url argument', function(t) {
-      validator.validateHostedUrl('not a url', function(err, data) {
+      validator('not a url', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -267,7 +271,7 @@ test('validateHostedUrl', function (t) {
     t.test('assertion url 404s', function(t) {
       httpScope()
         .get('/assertion').reply(404);
-      validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
+      validator(ORIGIN + '/assertion', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'http-status');
         t.same(err.url, ORIGIN + '/assertion');
@@ -280,7 +284,7 @@ test('validateHostedUrl', function (t) {
 
   t.test('unreachable error', function (t) {
     t.test('assertion url unreachable', function(t) {
-      validator.validateHostedUrl(UNREACHABLE + '/assertion', function(err, data) {
+      validator(UNREACHABLE + '/assertion', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'unreachable');
         t.same(err.url, UNREACHABLE + '/assertion');
@@ -290,34 +294,32 @@ test('validateHostedUrl', function (t) {
       });
     });
   });
-
-  t.test('delegates to validateHosted', function (t) {
-    httpScope()
-      .get('/assertion').reply(200, { 'hiphip': 'hooray' });
-    sinon.stub(validator, 'validateHosted').callsArgWith(1, null, 'ok');
-    validator.validateHostedUrl(ORIGIN + '/assertion', function(err, data) {
-      t.ok(validator.validateHosted.calledOnce, 'validateHosted called');
-      t.ok(validator.validateHosted.calledWith({ 'hiphip': 'hooray' }), 'called with assertion data');
-      validator.validateHosted.restore();
-      t.end();
-    });
-  });
-
 });
 
 test('validateSigned', function (t) {
-
   t.test('input error', function (t) {
+
+    /* @FIXME restore */
+    t.test('validateSigned: object arg', function(t) {
+      const assertion = generators['1.0.0-assertion']();
+      validator(assertion, function (err, data) {
+        t.ok(err, 'should have error');
+        t.same(err.code, 'verify-type-mismatch');
+        t.end();
+      }, '1.0.0', 'signed');
+    });
+    /**/
     t.test('non-string argument', function(t) {
-      validator.validateSigned({}, function(err, data) {
+      validator({}, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
         t.end();
       });
     });
+
     t.test('malformed signed badge', function(t) {
-      validator.validateSigned('abcd', function(err, data) {
+      validator('abcd', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -326,7 +328,7 @@ test('validateSigned', function (t) {
     });
     // TODO: include level of detail returned by unpackJWS/getAssertionGUID
     t.test('bad signature', function(t) {
-      validator.validateSigned('nope', function(err, data) {
+      validator('nope', function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -340,7 +342,7 @@ test('validateSigned', function (t) {
         payload: {},
         privateKey: keys.private
       });
-      validator.validateSigned(signature, function(err, data) {
+      validator(signature, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
@@ -354,15 +356,16 @@ test('validateSigned', function (t) {
         payload: 'hey there',
         privateKey: keys.private
       });
-      validator.validateSigned(signature, function(err, data) {
+      validator(signature, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
         t.end();
       });
     });
-  });
 
+  });
+ 
   t.test('structure error', function (t) {
     t.test('poorly structured signed 1.0', function (t) {
       const assertion = generators['1.0.0-assertion']({
@@ -386,7 +389,7 @@ test('validateSigned', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found":true}')
-      validator.validateSigned(signature, function(err, data) {
+      validator(signature, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'structure');
         t.ok(err.message, 'has message');
@@ -394,7 +397,7 @@ test('validateSigned', function (t) {
       });
     });
   });
-
+  
   t.test('verify-signature error', function (t) {
     t.test('signature mismatch', function(t) {
       const assertion = generators['1.0.0-assertion']({
@@ -422,7 +425,7 @@ test('validateSigned', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"found": true}')
-      validator.validateSigned(signature, function(err, data) {
+      validator(signature, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'verify-signature');
         t.ok(err.message, 'has message');
@@ -459,19 +462,19 @@ test('validateSigned', function (t) {
         .get('/evidence').reply(200, 'evidence')
         .get('/criteria').reply(200, 'criteria')
         .get('/revocation-list').reply(200, '{"abc123": "my bad"}')
-      validator.validateSigned(signature, function(err, data) {
+      validator(signature, function(err, data) {
         t.ok(err, 'should have error');
         t.same(err.code, 'verify-revoked');
         t.ok(err.message, 'has message');
         t.end();
       });
     });
-  });
 
+  });
 });
 
 test('validate', function(t) {
-
+  
   t.test('input error', function (t) {
     t.test('non-string, non-object argument', function(t) {
       validator(5, function(err, data) {
@@ -486,38 +489,6 @@ test('validate', function(t) {
         t.ok(err, 'should have error');
         t.same(err.code, 'input');
         t.ok(err.message, 'has message');
-        t.end();
-      });
-    });
-  });
-
-  t.test('delegation', function (t) {
-    t.test('delegates to validateHosted', function (t) {
-      sinon.stub(validator, 'validateHosted').callsArgWith(1, null, 'ok');
-      validator({}, function(err, data) {
-        t.ok(validator.validateHosted.called, 'calls validateHosted');
-        validator.validateHosted.restore();
-        t.end();
-      });
-    });
-    t.test('delegates to validateHostedUrl', function (t) {
-      sinon.stub(validator, 'validateHostedUrl').callsArgWith(1, null, 'ok');
-      validator('http://whereever.com/assertion', function(err, data) {
-        t.ok(validator.validateHostedUrl.called, 'calls validateHostedUrl');
-        validator.validateHostedUrl.restore();
-        t.end();
-      });
-    });
-    t.test('delegates to validateSigned', function (t) {
-      sinon.stub(validator, 'validateSigned').callsArgWith(1, null, 'ok');
-      const signature = jws.sign({
-        header: { alg: 'HS256' },
-        payload: { recipient: 'yup' },
-        privateKey: keys.private
-      });
-      validator(signature, function(err, data) {
-        t.ok(validator.validateSigned.called, 'calls validateSigned');
-        validator.validateSigned.restore();
         t.end();
       });
     });
@@ -588,7 +559,6 @@ test('getAssertionGuid', function (t) {
       });
     });
   });
-
 });
 
 // TODO: add the rest of the getUrl cases

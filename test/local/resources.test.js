@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const dataUrl = require('dataurl');
 const test = require('tap').test;
-const resources = require('../lib/resources');
+const resources = require('../../lib/resources');
 const nock = require('nock');
 
 const ORIGIN = 'https://example.org';
 const httpScope = nock(ORIGIN);
 
-var imageData = fs.readFileSync(path.join(__dirname, 'cc.large.png'));
+var imageData = fs.readFileSync(path.join(__dirname, '../cc.large.png'));
 
 test('getUrl: required, missing', function (t) {
   resources.getUrl({

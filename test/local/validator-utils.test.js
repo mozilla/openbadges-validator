@@ -1,8 +1,8 @@
 const jws = require('jws');
 const test = require('tap').test;
-const validator = require('..');
-const generators = require('./test-generators.js');
-const keys = require('./test-keys.js');
+const validator = require('../../');
+const generators = require('../test-generators.js');
+const keys = require('../test-keys.js');
 
 function sign(thing) {
   return jws.sign({
@@ -223,11 +223,9 @@ test('VALID_HASHES are recognized by node crypto', function (t) {
   t.end();
 });
 
-test('validator.isOldAssertion', function (t) {
-  t.notOk(validator.isOldAssertion());
-  t.notOk(validator.isOldAssertion('nope'));
-  t.notOk(validator.isOldAssertion({badge: 'non-obj'}));
-  t.notOk(validator.isOldAssertion({badge: {issuer: 'non-obj'}}));
-  t.ok(validator.isOldAssertion({badge: {issuer: {}}}));
+test('validator.parseVersion()', function (t) {
+  t.notOk(validator.parseVersion());
+  t.notOk(validator.parseVersion('nope'));
+  t.ok(validator.parseVersion({badge: {issuer: {}}}));
   t.end();
 });
