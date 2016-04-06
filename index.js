@@ -465,7 +465,7 @@ function taskVerifyExtensions (next, data) {
       }
     }
   }
-  errors = runTests(tests);
+  var errors = runTests(tests);
   if (errors) {
     return next(makeError('extensions', 'invalid extension structure', removeNulls(errors)));
   }
@@ -573,7 +573,7 @@ function taskCheckResources (next, data) {
   if (data.parse.version == '0.5.0') {
     data.assertion = absolutize(data.assertion);
   }
-  spec = clone(constants.SCHEMES[data.parse.scheme].resources);
+  var spec = clone(constants.SCHEMES[data.parse.scheme].resources);
   for (var property in data.extensions) {
     if (data.extensions.hasOwnProperty(property)) {
       spec['extensions.' + property + '.@context'] = {
