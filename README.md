@@ -24,7 +24,7 @@ the validated assertion.
 
 - `callback` (function) A function taking two parameters `(err, data)`, where `err == null` indicates a valid badge, and `data` is an object containing all validation data collected before an error was thrown.<br><br>Take a look at the structure of [the full resulting `data` object](https://github.com/mozilla/openbadges-validator/wiki/Example-Validator-Result).
 
-- `version` (string) Optional: force the validator to check against a certain specification version. <br>Allowed values: `"0.5.0"`, `"1.0.0"` `"1.1.0". 
+- `version` (string) Optional: force the validator to check against a certain specification version. <br>Allowed values: `"0.5.0"`, `"1.0.0"` `"1.1.0"`. 
 
 - `verificationType` (string) Optional: force the validator to use a certain type of verification. <br>Allowed values: `"hosted"`, `"signed"`.
 
